@@ -8,9 +8,11 @@ It fixes the errors in Sony's protocol manual, documents behaviour the manual le
 > This document is written from scratch from testing on a real unit. It does not reproduce Sony's manual. For the official command definitions, see Sony's *MCS-8M Protocol Manual* (1st edition, 2011).
 > Use at your own risk. Sending write commands changes what's on air.
 
-## The one thing you must know
+## The two things that stop it working
 
-**The byte count (BC) is big-endian.** Sony's manual says "2 byte Little Endian", and that's wrong. If you follow it, the switcher silently ignores every frame you send. Every example in the manual, and the real unit, use high byte first:
+**1. Serial control is off from the factory.** On the switcher, open Setup → System, highlight **Back**, press the **V3** knob, and set **Serial Cmd Group = Rem 1**. Then **save and restart with Startup Define**. Until you do, the switcher silently ignores the serial port: no error, no reply. See [Hardware](docs/07-hardware.md#required-enable-serial-control-on-the-switcher).
+
+**2. The byte count (BC) is big-endian.** Sony's manual says "2 byte Little Endian", and that's wrong. If you follow it, the switcher silently ignores every frame you send. Every example in the manual, and the real unit, use high byte first:
 
 ```
 01 02 00 0B 01 50 20 00 00 03 04 00 80 00 01 FC 03
@@ -44,6 +46,7 @@ Just want a projector control panel? Import the **[Node-RED dashboard](examples/
 | [04 Errata](docs/04-errata.md) | Mistakes in the official manual |
 | [05 Undocumented](docs/05-undocumented.md) | Commands found by probing, and how to help decode them |
 | [06 Examples](docs/06-examples.md) | Real captured frames, annotated byte by byte |
+| [07 Hardware](docs/07-hardware.md) | Enabling Rem 1, the REMOTE pinout, null-modem cables, adapters (RS-232 vs TTL), cable length, loopback test |
 
 ## Confidence labels
 
@@ -65,6 +68,7 @@ Tested on: MCS-8M, main application version 1.01 or later, RS-232 at 38400 8N1 t
 | [`tools/mcs8m_dump.py`](tools/mcs8m_dump.py) | Reads every documented setting (118 reads, about 31 s) and writes a JSON file. **Read-only.** |
 | [`tools/mcs8m_probe.py`](tools/mcs8m_probe.py) | Searches for undocumented read commands. **Read-only**, can be resumed, and stops if anything unexpected happens. |
 | [`tools/values.json`](tools/values.json) | Code-to-value tables (fader dB, EQ frequencies, pan…), made by `tools/gen_values.py` |
+| [`tools/loopback_test.py`](tools/loopback_test.py) | Checks your adapter and cable without the switcher (pins 2–3 joined) |
 | [`tools/simulator.py`](tools/simulator.py) | A fake MCS-8M on a virtual serial port, for development without hardware |
 | [`tools/check_docs.py`](tools/check_docs.py) | Checks the byte count and checksum of every frame quoted in these docs |
 

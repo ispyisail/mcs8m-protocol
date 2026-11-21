@@ -6,21 +6,24 @@ From an unconnected switcher to reading what's on air, in about 15 minutes.
 
 - A Sony MCS-8M
 - A computer with a serial port, or a **USB-to-RS-232 adapter** (FTDI- or Prolific-based ones are fine). A Raspberry Pi works well.
-- A **null-modem (crossed) cable**, DB-9 female at both ends. A straight-through cable won't work.
+- A **null-modem (crossed) cable** with 9-pin D-sub connectors. A straight-through cable won't work. Check whether you need pins or sockets on each end; see [Hardware](07-hardware.md).
 - Python 3 (built into Linux, macOS and Raspberry Pi OS)
 
 No switcher yet? Skip to [Try it without hardware](#try-it-without-hardware).
 
 ## Step 1: enable serial control on the switcher
 
-Serial control is **off** from the factory.
+> 🛑 **This step is required.** Serial control is **off** from the factory. If it's off, the switcher silently ignores everything sent to it: no error, no reply, just like a broken cable.
 
-1. On the switcher, go to **Setup → System**.
-2. Move the cursor to the bottom item, **Back**, and press the **V3** knob. A **For Services** menu appears.
+1. On the switcher, open **Setup → System**.
+2. Move the cursor to the bottom item, **Back**, and press the **V3** knob. A hidden **For Services** menu appears.
 3. Set **Serial Cmd Group** to **Rem 1**.
-4. Save with **Startup Define**, then restart the switcher.
+4. **Save and restart with Startup Define.** If you skip this, the setting may not stick.
+5. After the restart, check that Serial Cmd Group still says **Rem 1**.
 
 > ⚠️ Change nothing else in For Services, and never choose **FACT**. That's a factory mode.
+
+More detail, including "it worked yesterday but not today", is in [Hardware → Enable serial control](07-hardware.md#required-enable-serial-control-on-the-switcher).
 
 ## Step 2: connect
 
@@ -74,7 +77,8 @@ python3 tools/mcs8m_dump.py -p /dev/ttyUSB0 -o settings.json  # every documented
 
 | Symptom | Check |
 |---|---|
-| `NoReply` / "Nothing answered" | Is Serial Cmd Group set to **Rem 1**, and did you restart the switcher after saving? |
+| `NoReply` / "Nothing answered" | **First check:** is Serial Cmd Group set to **Rem 1**, and was it saved with **Startup Define**? A setting that wasn't saved is lost at power-off. |
+| | Run the [loopback test](07-hardware.md#1-the-adapter-loopback-test) to rule out the adapter and cable. |
 | | Is it a **null-modem** cable? Try a null-modem adapter. |
 | | Is another program (e.g. Node-RED) holding the port? |
 | | Is the port name right? Unplug the adapter, run `ls` again, and see which name disappears. |

@@ -20,6 +20,8 @@ Serial control is **off** from the factory and must be enabled in a service menu
 
 > ⚠️ Don't change anything else in For Services. In particular, never select **FACT** in Serial Cmd Group: it's a factory mode, and Sony warns that it causes unexpected behaviour.
 
+If this isn't done, or wasn't saved, the switcher silently ignores every frame. See [Hardware](07-hardware.md#required-enable-serial-control-on-the-switcher) for the details and a checklist. Wiring, cables and adapters are covered there too.
+
 ## Frame layout ✅
 
 Every message, in both directions, has the same envelope:
