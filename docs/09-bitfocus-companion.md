@@ -18,6 +18,42 @@ Stream Deck ─► Companion ─► Generic TCP/UDP ─► 127.0.0.1:32100 ─�
 
 ❓ **Not yet tested:** a full Stream Deck → Companion → real switcher run. If you try it, please report back in an issue.
 
+## Recommended: through the MCS-8M bridge
+
+If you run the [bridge](../bridge/), Companion doesn't need hex at all. It uses Companion's **Generic: HTTP Requests** module:
+- buttons send plain web requests;
+- buttons can **light up to show what's live** (tally);
+- the switcher can be shared with vMix, OBS and the dashboards at the same time.
+
+**Connection:** add **Generic: HTTP Requests**, and set **Base URL** to `http://<bridge computer>:8765/api/`.
+
+**Actions:** use the **POST** action, with one of these as the **URI**:
+
+| Button | URI |
+|---|---|
+| Aux 1 → input 3 | `aux/1/3` |
+| Program (hot cut) → input 3 | `program/3` |
+| Preset → input 3 | `preset/3` |
+| CUT · AUTO TRANS · AUTO TRANS 45 frames | `cut` · `auto` · `auto/45` |
+| Mute / unmute CH2 | `mute/2/on` · `mute/2/off` |
+| vMix / OBS lead mode | `mode/vmix/both`, `mode/obs/switcher_leads`, … |
+
+If you set a token in the bridge's config, put `{"Authorization": "Bearer <token>"}` in the action's **Header** field.
+
+**Tally on the buttons:** add the feedback **Image from URL** to a button:
+- URI `tally/3.png` turns the button **red** while input 3 is on air, **green** while it's on preset, and dark grey otherwise.
+- `tally/aux/1/3.png` turns it **amber** while Aux 1 shows input 3.
+- Set **Poll Interval** to `500` ms.
+- Add `?size=72`, or another size, to match your Stream Deck's key size.
+
+The bridge also refuses commands that would create a [video loop](../bridge/README.md#video-loop-protection). Refusals show up as errors in Companion's log.
+
+✅ The bridge side of this (URIs, tally images, refusals) is tested. ❓ The Companion side has only been checked against the module's documentation, not yet tried in Companion.
+
+## Without the bridge: direct serial (hex)
+
+The rest of this guide drives the switcher's serial port directly from Companion, without the bridge.
+
 ## Before you start
 
 - Serial control enabled on the switcher, **Serial Cmd Group = Rem 1** ([Hardware](07-hardware.md#required-enable-serial-control-on-the-switcher)).
@@ -159,11 +195,15 @@ Notes:
 
 ## Button feedback (tally on the Stream Deck)
 
+**Use the bridge.** Its [tally images](#recommended-through-the-mcs-8m-bridge) light the buttons reliably. The rest of this section applies only to the direct-serial method.
+
 The generic module **can't reliably light buttons** to show what's live. It only keeps the *last* thing received, in `$(mcs8m:tcp_response)` (turn on *Save TCP Response* and set it to *Hex*). The switcher sends many kinds of frames, and they can arrive split or merged, so that variable often doesn't hold the one you want.
 
 Proper feedback needs a dedicated Companion module that frames replies by byte count. That's what [`examples/javascript/mcs8m.js`](../examples/javascript/mcs8m.js) does, so it's a good starting point. Until someone builds one, use Companion for **actions**, and the [Node-RED dashboard](../examples/node-red/dashboard/) or the [tally example](../examples/python/03_tally.py) to **see** what's live.
 
 ## Sharing the switcher with Node-RED
+
+**Use the bridge:** it owns the serial port and shares it with Companion, vMix, OBS and the [bridge version of the dashboard](../examples/node-red/dashboard/). The notes below are for setups without it.
 
 The serial port can only be opened by one program at a time. To use the dashboard **and** Companion together, let **ser2net** (Setup B) own the port. Then connect both to it over TCP:
 - Companion uses Generic TCP/UDP, as above;

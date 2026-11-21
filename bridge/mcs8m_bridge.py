@@ -14,6 +14,9 @@ transition, mutes), and offers it to everything else over HTTP:
     POST /api/aux/<1|2>/<n>             route input n to Aux 1 or 2
     POST /api/mute/<ch>/<on|off>        mute (on = CH ON dark) channel 1-6
     POST /api/mode/<app>/<mode>         who leads: switcher_leads | app_leads | both | off
+    GET  /api/tally/<n>.png             tally image: red on air, green on preset, grey idle
+    GET  /api/tally/aux/<1|2>/<n>.png   amber when Aux 1/2 shows input n
+    GET  /                              control page (control.html)
 
 Every change carries an "origin" (switcher = its panel, api, vmix, obs), which is
 what lets connectors avoid echo loops. A video-loop guard refuses changes that
@@ -22,7 +25,7 @@ would put the vMix return on air while vMix shows the switcher (see README).
 Connectors: vmix.py (vMix TCP API), obs.py (obs-websocket v5). Python 3.7+ standard library only (Windows: pip install pyserial).
     python3 bridge/mcs8m_bridge.py -c bridge/config.json
 """
-import argparse, hmac, json, os, queue, sys, threading, time
+import argparse, hmac, json, os, queue, struct, sys, threading, time, zlib
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
@@ -387,6 +390,26 @@ class Bridge:
 
 
 # ============================================================================ HTTP
+TALLY_COLOURS = {"program": (220, 38, 38), "preset": (22, 163, 74), "aux": (217, 119, 6), "idle": (41, 37, 36)}
+
+
+def solid_png(w, h, rgb):
+    """A plain-colour PNG, standard library only (for Stream Deck / Companion tally)."""
+    def chunk(tag, data):
+        return struct.pack("!I", len(data)) + tag + data + struct.pack("!I", zlib.crc32(tag + data) & 0xFFFFFFFF)
+    raw = (b"\x00" + bytes(rgb) * w) * h
+    return (b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack("!IIBBBBB", w, h, 8, 2, 0, 0, 0))
+            + chunk(b"IDAT", zlib.compress(raw, 9)) + chunk(b"IEND", b""))
+
+
+def control_page():
+    try:
+        with open(os.path.join(HERE, "control.html"), "rb") as f:
+            return f.read()
+    except OSError:
+        return STATUS_PAGE.encode()
+
+
 STATUS_PAGE = """<!doctype html><meta charset=utf-8><meta name=viewport content="width=device-width">
 <title>MCS-8M bridge</title><style>body{font:16px system-ui;margin:1em}pre{background:#f4f4f4;padding:1em}</style>
 <h1>MCS-8M bridge</h1><p id=w style="color:#b00;font-weight:bold"></p><pre id=s>connecting...</pre>
@@ -425,7 +448,7 @@ def make_handler(bridge):
         def do_GET(self):
             u = urlparse(self.path)
             if u.path in ("/", "/index.html"):
-                body = STATUS_PAGE.encode()
+                body = control_page()
                 self.send_response(200)
                 self.send_header("Content-Type", "text/html; charset=utf-8")
                 self.send_header("Content-Length", str(len(body)))
@@ -435,8 +458,35 @@ def make_handler(bridge):
                 self._json(200, bridge.snapshot())
             elif u.path == "/api/events":
                 self._events()
+            elif u.path.startswith("/api/tally/") and u.path.endswith(".png"):
+                self._tally(u)
             else:
                 self._json(404, {"error": "not found"})
+
+        def _tally(self, u):
+            p = u.path[len("/api/tally/"):-len(".png")].split("/")
+            st = bridge.snapshot()
+            try:
+                if len(p) == 1:
+                    n = int(p[0])
+                    look = "program" if st["program"] == n else "preset" if st["preset"] == n else "idle"
+                elif len(p) == 3 and p[0] == "aux" and p[1] in ("1", "2"):
+                    look = "aux" if st["aux" + p[1]] == int(p[2]) else "idle"
+                else:
+                    raise ValueError
+                size = max(8, min(512, int((parse_qs(u.query).get("size") or ["72"])[0])))
+            except ValueError:
+                return self._json(404, {"error": "use /api/tally/<n>.png or /api/tally/aux/<1|2>/<n>.png"})
+            if not st["connected"]:
+                look = "idle"
+            body = solid_png(size, size, TALLY_COLOURS[look])
+            self.send_response(200)
+            self.send_header("Content-Type", "image/png")
+            self.send_header("Content-Length", str(len(body)))
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("X-Tally", look)
+            self.end_headers()
+            self.wfile.write(body)
 
         def _events(self):
             q = queue.Queue(maxsize=500)

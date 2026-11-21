@@ -41,6 +41,7 @@ For real use, match replies to requests and frame them by BC. The switcher also 
 ## What you can build
 
 - **Projector or Aux control panels for volunteers.** A [ready-made Node-RED dashboard](examples/node-red/dashboard/) is included.
+- **vMix and OBS integration**: lower thirds with the camera's name, OBS scenes that follow the Sony, or vMix/OBS driving the Sony, with video-loop protection. See the [bridge](bridge/).
 - **Tally lights**: on-air and preview indicators on ESP32s or phones. The switcher announces program changes and transitions as they happen ([tally example](examples/python/03_tally.py)).
 - **Stream Deck / Bitfocus Companion buttons**: cut, auto-transition, mute or route Aux outputs from a button, using Companion's built-in generic modules. There's a [step-by-step guide](docs/09-bitfocus-companion.md) with ready-to-paste commands. (There's no dedicated module with tally feedback yet.)
 - **Automation bridges**, from Node-RED, Home Assistant, or show-control software, via a Raspberry Pi or a serial-to-network adapter.
@@ -109,7 +110,7 @@ Tested on: MCS-8M, main application version 1.01 or later, RS-232 at 38400 8N1 t
 | [`tools/mcs8m_probe.py`](tools/mcs8m_probe.py) | Searches for undocumented read commands. **Read-only**, can be resumed, and stops if anything unexpected happens. |
 | [`tools/values.json`](tools/values.json) | Code-to-value tables (fader dB, EQ frequencies, pan…), made by `tools/gen_values.py` |
 | [`tools/install-pi.sh`](tools/install-pi.sh) | One-command Raspberry Pi setup: Node-RED, add-ons, serial permissions, this repo; `--dashboard` or `--restore` |
-| [`bridge/`](bridge/) | **Network bridge**: owns the serial port, shares live state and commands over HTTP, video-loop guard, **vMix** (lower thirds) and **OBS** (scenes) connectors, follow or control |
+| [`bridge/`](bridge/) | **Network bridge**: owns the serial port and shares it. HTTP API, control page, Stream Deck tally images, video-loop guard, **vMix** (lower thirds) and **OBS** (scenes) connectors (follow, lead or both), always-on service |
 | [`tools/check_commands.py`](tools/check_commands.py) | Validates `commands.json` against the tested tools |
 | [`tools/companion_commands.py`](tools/companion_commands.py) | Ready-to-paste hex commands for Bitfocus Companion (Aux, program, preset, AUTO TRANS, FTB, mute, snapshot recall) |
 | [`tools/loopback_test.py`](tools/loopback_test.py) | Checks your adapter and cable without the switcher (pins 2–3 joined) |

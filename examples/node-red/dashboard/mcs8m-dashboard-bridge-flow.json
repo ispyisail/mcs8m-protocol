@@ -1,0 +1,1045 @@
+[
+ {
+  "id": "mcs8m.bdash.tab",
+  "type": "tab",
+  "label": "MCS-8M Dashboard (via bridge)",
+  "disabled": false,
+  "info": "Phone/tablet dashboard for a Sony MCS-8M, talking to the MCS-8M bridge (bridge/ in the repo)\ninstead of the serial port, so vMix, OBS and Companion can share the switcher.\n\nSetup: start the bridge, then double-click EDIT SETTINGS HERE and set bridge_url (and bridge_token if you set one)."
+ },
+ {
+  "id": "mcs8m.bdash.uitab",
+  "type": "ui_tab",
+  "name": "MCS-8M",
+  "icon": "dashboard",
+  "disabled": false,
+  "hidden": false
+ },
+ {
+  "id": "mcs8m.bdash.g1",
+  "type": "ui_group",
+  "name": "Aux 1",
+  "tab": "mcs8m.bdash.uitab",
+  "order": 1,
+  "disp": true,
+  "width": "6",
+  "collapse": false,
+  "className": ""
+ },
+ {
+  "id": "mcs8m.bdash.g2",
+  "type": "ui_group",
+  "name": "Aux 2",
+  "tab": "mcs8m.bdash.uitab",
+  "order": 2,
+  "disp": true,
+  "width": "6",
+  "collapse": false,
+  "className": ""
+ },
+ {
+  "id": "mcs8m.bdash.gc",
+  "type": "ui_group",
+  "name": "Connection",
+  "tab": "mcs8m.bdash.uitab",
+  "order": 3,
+  "disp": true,
+  "width": "6",
+  "collapse": false,
+  "className": ""
+ },
+ {
+  "id": "mcs8m.bdash.note",
+  "type": "comment",
+  "z": "mcs8m.bdash.tab",
+  "name": "START HERE: double-click 'EDIT SETTINGS HERE' (bridge address, names, buttons)",
+  "info": "1. EDIT SETTINGS HERE: bridge_url, bridge_token, input names, button sources.\n2. Button labels: double-click each button to rename it.\nThe bridge must be running: python3 bridge/mcs8m_bridge.py",
+  "x": 260,
+  "y": 40,
+  "wires": []
+ },
+ {
+  "id": "mcs8m.bdash.init",
+  "type": "inject",
+  "z": "mcs8m.bdash.tab",
+  "name": "Load settings",
+  "props": [],
+  "repeat": "",
+  "crontab": "",
+  "once": true,
+  "onceDelay": 0.1,
+  "topic": "",
+  "x": 130,
+  "y": 100,
+  "wires": [
+   [
+    "mcs8m.bdash.settings"
+   ]
+  ]
+ },
+ {
+  "id": "mcs8m.bdash.settings",
+  "type": "change",
+  "z": "mcs8m.bdash.tab",
+  "name": "EDIT SETTINGS HERE",
+  "rules": [
+   {
+    "t": "set",
+    "p": "source_names",
+    "pt": "flow",
+    "tot": "json",
+    "to": "{\"1\": \"Input 1\", \"2\": \"Input 2\", \"3\": \"Input 3\", \"4\": \"Input 4\", \"5\": \"Input 5\", \"6\": \"Input 6\", \"7\": \"Input 7\", \"8\": \"Input 8\", \"9\": \"Input 9\", \"10\": \"Input 10\", \"11\": \"Input 11\", \"12\": \"Input 12\", \"13\": \"Input 13\", \"14\": \"Input 14\"}"
+   },
+   {
+    "t": "set",
+    "p": "buttons",
+    "pt": "flow",
+    "tot": "json",
+    "to": "[1,2,3,4]"
+   },
+   {
+    "t": "set",
+    "p": "bridge_url",
+    "pt": "flow",
+    "tot": "str",
+    "to": "http://127.0.0.1:8765"
+   },
+   {
+    "t": "set",
+    "p": "bridge_token",
+    "pt": "flow",
+    "tot": "str",
+    "to": ""
+   }
+  ],
+  "action": "",
+  "property": "",
+  "from": "",
+  "to": "",
+  "reg": false,
+  "x": 330,
+  "y": 100,
+  "wires": [
+   []
+  ],
+  "info": "source_names: name shown for each input (1-14).\nbuttons: the source number each of the 4 buttons selects, top to bottom.\nbridge_url: where the MCS-8M bridge runs, e.g. http://127.0.0.1:8765 (same Pi) or http://192.168.1.20:8765.\nbridge_token: only if http.token is set in the bridge's config.json."
+ },
+ {
+  "id": "mcs8m.bdash.a1led1",
+  "type": "ui_led",
+  "z": "mcs8m.bdash.tab",
+  "order": 1,
+  "group": "mcs8m.bdash.g1",
+  "width": "1",
+  "height": "1",
+  "label": "",
+  "labelPlacement": "left",
+  "labelAlignment": "left",
+  "colorForValue": [
+   {
+    "color": "#808080",
+    "value": "false",
+    "valueType": "bool"
+   },
+   {
+    "color": "#4CAF50",
+    "value": "true",
+    "valueType": "bool"
+   }
+  ],
+  "allowColorForValueInMessage": false,
+  "shape": "circle",
+  "showGlow": true,
+  "name": "",
+  "x": 1150,
+  "y": 160,
+  "wires": []
+ },
+ {
+  "id": "mcs8m.bdash.a1btn1",
+  "type": "ui_button",
+  "z": "mcs8m.bdash.tab",
+  "name": "",
+  "group": "mcs8m.bdash.g1",
+  "order": 2,
+  "width": "5",
+  "height": "1",
+  "passthru": false,
+  "label": "INPUT 1",
+  "tooltip": "",
+  "color": "",
+  "bgcolor": "",
+  "className": "",
+  "icon": "videocam",
+  "payload": "{\"aux\": 1, \"source\": 1}",
+  "payloadType": "json",
+  "topic": "",
+  "topicType": "str",
+  "x": 170,
+  "y": 160,
+  "wires": [
+   [
+    "mcs8m.bdash.send"
+   ]
+  ]
+ },
+ {
+  "id": "mcs8m.bdash.a1led2",
+  "type": "ui_led",
+  "z": "mcs8m.bdash.tab",
+  "order": 3,
+  "group": "mcs8m.bdash.g1",
+  "width": "1",
+  "height": "1",
+  "label": "",
+  "labelPlacement": "left",
+  "labelAlignment": "left",
+  "colorForValue": [
+   {
+    "color": "#808080",
+    "value": "false",
+    "valueType": "bool"
+   },
+   {
+    "color": "#4CAF50",
+    "value": "true",
+    "valueType": "bool"
+   }
+  ],
+  "allowColorForValueInMessage": false,
+  "shape": "circle",
+  "showGlow": true,
+  "name": "",
+  "x": 1150,
+  "y": 200,
+  "wires": []
+ },
+ {
+  "id": "mcs8m.bdash.a1btn2",
+  "type": "ui_button",
+  "z": "mcs8m.bdash.tab",
+  "name": "",
+  "group": "mcs8m.bdash.g1",
+  "order": 4,
+  "width": "5",
+  "height": "1",
+  "passthru": false,
+  "label": "INPUT 2",
+  "tooltip": "",
+  "color": "",
+  "bgcolor": "",
+  "className": "",
+  "icon": "videocam",
+  "payload": "{\"aux\": 1, \"source\": 2}",
+  "payloadType": "json",
+  "topic": "",
+  "topicType": "str",
+  "x": 170,
+  "y": 200,
+  "wires": [
+   [
+    "mcs8m.bdash.send"
+   ]
+  ]
+ },
+ {
+  "id": "mcs8m.bdash.a1led3",
+  "type": "ui_led",
+  "z": "mcs8m.bdash.tab",
+  "order": 5,
+  "group": "mcs8m.bdash.g1",
+  "width": "1",
+  "height": "1",
+  "label": "",
+  "labelPlacement": "left",
+  "labelAlignment": "left",
+  "colorForValue": [
+   {
+    "color": "#808080",
+    "value": "false",
+    "valueType": "bool"
+   },
+   {
+    "color": "#4CAF50",
+    "value": "true",
+    "valueType": "bool"
+   }
+  ],
+  "allowColorForValueInMessage": false,
+  "shape": "circle",
+  "showGlow": true,
+  "name": "",
+  "x": 1150,
+  "y": 240,
+  "wires": []
+ },
+ {
+  "id": "mcs8m.bdash.a1btn3",
+  "type": "ui_button",
+  "z": "mcs8m.bdash.tab",
+  "name": "",
+  "group": "mcs8m.bdash.g1",
+  "order": 6,
+  "width": "5",
+  "height": "1",
+  "passthru": false,
+  "label": "INPUT 3",
+  "tooltip": "",
+  "color": "",
+  "bgcolor": "",
+  "className": "",
+  "icon": "videocam",
+  "payload": "{\"aux\": 1, \"source\": 3}",
+  "payloadType": "json",
+  "topic": "",
+  "topicType": "str",
+  "x": 170,
+  "y": 240,
+  "wires": [
+   [
+    "mcs8m.bdash.send"
+   ]
+  ]
+ },
+ {
+  "id": "mcs8m.bdash.a1led4",
+  "type": "ui_led",
+  "z": "mcs8m.bdash.tab",
+  "order": 7,
+  "group": "mcs8m.bdash.g1",
+  "width": "1",
+  "height": "1",
+  "label": "",
+  "labelPlacement": "left",
+  "labelAlignment": "left",
+  "colorForValue": [
+   {
+    "color": "#808080",
+    "value": "false",
+    "valueType": "bool"
+   },
+   {
+    "color": "#4CAF50",
+    "value": "true",
+    "valueType": "bool"
+   }
+  ],
+  "allowColorForValueInMessage": false,
+  "shape": "circle",
+  "showGlow": true,
+  "name": "",
+  "x": 1150,
+  "y": 280,
+  "wires": []
+ },
+ {
+  "id": "mcs8m.bdash.a1btn4",
+  "type": "ui_button",
+  "z": "mcs8m.bdash.tab",
+  "name": "",
+  "group": "mcs8m.bdash.g1",
+  "order": 8,
+  "width": "5",
+  "height": "1",
+  "passthru": false,
+  "label": "INPUT 4",
+  "tooltip": "",
+  "color": "",
+  "bgcolor": "",
+  "className": "",
+  "icon": "videocam",
+  "payload": "{\"aux\": 1, \"source\": 4}",
+  "payloadType": "json",
+  "topic": "",
+  "topicType": "str",
+  "x": 170,
+  "y": 280,
+  "wires": [
+   [
+    "mcs8m.bdash.send"
+   ]
+  ]
+ },
+ {
+  "id": "mcs8m.bdash.a1active",
+  "type": "ui_text",
+  "z": "mcs8m.bdash.tab",
+  "group": "mcs8m.bdash.g1",
+  "order": 9,
+  "width": "6",
+  "height": "1",
+  "name": "",
+  "label": "Active:",
+  "format": "{{msg.payload}}",
+  "layout": "row-spread",
+  "className": "",
+  "x": 1150,
+  "y": 320,
+  "wires": []
+ },
+ {
+  "id": "mcs8m.bdash.a2led1",
+  "type": "ui_led",
+  "z": "mcs8m.bdash.tab",
+  "order": 1,
+  "group": "mcs8m.bdash.g2",
+  "width": "1",
+  "height": "1",
+  "label": "",
+  "labelPlacement": "left",
+  "labelAlignment": "left",
+  "colorForValue": [
+   {
+    "color": "#808080",
+    "value": "false",
+    "valueType": "bool"
+   },
+   {
+    "color": "#4CAF50",
+    "value": "true",
+    "valueType": "bool"
+   }
+  ],
+  "allowColorForValueInMessage": false,
+  "shape": "circle",
+  "showGlow": true,
+  "name": "",
+  "x": 1150,
+  "y": 360,
+  "wires": []
+ },
+ {
+  "id": "mcs8m.bdash.a2btn1",
+  "type": "ui_button",
+  "z": "mcs8m.bdash.tab",
+  "name": "",
+  "group": "mcs8m.bdash.g2",
+  "order": 2,
+  "width": "5",
+  "height": "1",
+  "passthru": false,
+  "label": "INPUT 1",
+  "tooltip": "",
+  "color": "",
+  "bgcolor": "",
+  "className": "",
+  "icon": "videocam",
+  "payload": "{\"aux\": 2, \"source\": 1}",
+  "payloadType": "json",
+  "topic": "",
+  "topicType": "str",
+  "x": 170,
+  "y": 360,
+  "wires": [
+   [
+    "mcs8m.bdash.send"
+   ]
+  ]
+ },
+ {
+  "id": "mcs8m.bdash.a2led2",
+  "type": "ui_led",
+  "z": "mcs8m.bdash.tab",
+  "order": 3,
+  "group": "mcs8m.bdash.g2",
+  "width": "1",
+  "height": "1",
+  "label": "",
+  "labelPlacement": "left",
+  "labelAlignment": "left",
+  "colorForValue": [
+   {
+    "color": "#808080",
+    "value": "false",
+    "valueType": "bool"
+   },
+   {
+    "color": "#4CAF50",
+    "value": "true",
+    "valueType": "bool"
+   }
+  ],
+  "allowColorForValueInMessage": false,
+  "shape": "circle",
+  "showGlow": true,
+  "name": "",
+  "x": 1150,
+  "y": 400,
+  "wires": []
+ },
+ {
+  "id": "mcs8m.bdash.a2btn2",
+  "type": "ui_button",
+  "z": "mcs8m.bdash.tab",
+  "name": "",
+  "group": "mcs8m.bdash.g2",
+  "order": 4,
+  "width": "5",
+  "height": "1",
+  "passthru": false,
+  "label": "INPUT 2",
+  "tooltip": "",
+  "color": "",
+  "bgcolor": "",
+  "className": "",
+  "icon": "videocam",
+  "payload": "{\"aux\": 2, \"source\": 2}",
+  "payloadType": "json",
+  "topic": "",
+  "topicType": "str",
+  "x": 170,
+  "y": 400,
+  "wires": [
+   [
+    "mcs8m.bdash.send"
+   ]
+  ]
+ },
+ {
+  "id": "mcs8m.bdash.a2led3",
+  "type": "ui_led",
+  "z": "mcs8m.bdash.tab",
+  "order": 5,
+  "group": "mcs8m.bdash.g2",
+  "width": "1",
+  "height": "1",
+  "label": "",
+  "labelPlacement": "left",
+  "labelAlignment": "left",
+  "colorForValue": [
+   {
+    "color": "#808080",
+    "value": "false",
+    "valueType": "bool"
+   },
+   {
+    "color": "#4CAF50",
+    "value": "true",
+    "valueType": "bool"
+   }
+  ],
+  "allowColorForValueInMessage": false,
+  "shape": "circle",
+  "showGlow": true,
+  "name": "",
+  "x": 1150,
+  "y": 440,
+  "wires": []
+ },
+ {
+  "id": "mcs8m.bdash.a2btn3",
+  "type": "ui_button",
+  "z": "mcs8m.bdash.tab",
+  "name": "",
+  "group": "mcs8m.bdash.g2",
+  "order": 6,
+  "width": "5",
+  "height": "1",
+  "passthru": false,
+  "label": "INPUT 3",
+  "tooltip": "",
+  "color": "",
+  "bgcolor": "",
+  "className": "",
+  "icon": "videocam",
+  "payload": "{\"aux\": 2, \"source\": 3}",
+  "payloadType": "json",
+  "topic": "",
+  "topicType": "str",
+  "x": 170,
+  "y": 440,
+  "wires": [
+   [
+    "mcs8m.bdash.send"
+   ]
+  ]
+ },
+ {
+  "id": "mcs8m.bdash.a2led4",
+  "type": "ui_led",
+  "z": "mcs8m.bdash.tab",
+  "order": 7,
+  "group": "mcs8m.bdash.g2",
+  "width": "1",
+  "height": "1",
+  "label": "",
+  "labelPlacement": "left",
+  "labelAlignment": "left",
+  "colorForValue": [
+   {
+    "color": "#808080",
+    "value": "false",
+    "valueType": "bool"
+   },
+   {
+    "color": "#4CAF50",
+    "value": "true",
+    "valueType": "bool"
+   }
+  ],
+  "allowColorForValueInMessage": false,
+  "shape": "circle",
+  "showGlow": true,
+  "name": "",
+  "x": 1150,
+  "y": 480,
+  "wires": []
+ },
+ {
+  "id": "mcs8m.bdash.a2btn4",
+  "type": "ui_button",
+  "z": "mcs8m.bdash.tab",
+  "name": "",
+  "group": "mcs8m.bdash.g2",
+  "order": 8,
+  "width": "5",
+  "height": "1",
+  "passthru": false,
+  "label": "INPUT 4",
+  "tooltip": "",
+  "color": "",
+  "bgcolor": "",
+  "className": "",
+  "icon": "videocam",
+  "payload": "{\"aux\": 2, \"source\": 4}",
+  "payloadType": "json",
+  "topic": "",
+  "topicType": "str",
+  "x": 170,
+  "y": 480,
+  "wires": [
+   [
+    "mcs8m.bdash.send"
+   ]
+  ]
+ },
+ {
+  "id": "mcs8m.bdash.a2active",
+  "type": "ui_text",
+  "z": "mcs8m.bdash.tab",
+  "group": "mcs8m.bdash.g2",
+  "order": 9,
+  "width": "6",
+  "height": "1",
+  "name": "",
+  "label": "Active:",
+  "format": "{{msg.payload}}",
+  "layout": "row-spread",
+  "className": "",
+  "x": 1150,
+  "y": 520,
+  "wires": []
+ },
+ {
+  "id": "mcs8m.bdash.leds",
+  "type": "function",
+  "z": "mcs8m.bdash.tab",
+  "name": "LED & Status Controller",
+  "func": "// Lights the LED next to whichever button matches each Aux output's source,\n// and shows the source name. Outputs: Aux1 LEDs 1-4, Aux2 LEDs 1-4, Aux1 name, Aux2 name.\nif (!msg.payload || !msg.payload.aux || !msg.payload.source) return null;\nflow.set(`aux${msg.payload.aux}_source`, msg.payload.source);\nconst src = { 1: flow.get('aux1_source') || 0, 2: flow.get('aux2_source') || 0 };\nconst buttons = flow.get('buttons') || [1, 2, 3, 4];          // set in EDIT SETTINGS HERE\nconst names = flow.get('source_names') || {};\nconst name = s => s ? (names[s] || `Input ${s}`) : '-';\nconst out = [];\nfor (const aux of [1, 2]) for (let i = 0; i < 4; i++) out.push({ payload: src[aux] === buttons[i] });\nout.push({ payload: name(src[1]) }, { payload: name(src[2]) });\nreturn out;",
+  "outputs": 10,
+  "timeout": 0,
+  "noerr": 0,
+  "initialize": "",
+  "finalize": "",
+  "libs": [],
+  "x": 980,
+  "y": 700,
+  "wires": [
+   [
+    "mcs8m.bdash.a1led1"
+   ],
+   [
+    "mcs8m.bdash.a1led2"
+   ],
+   [
+    "mcs8m.bdash.a1led3"
+   ],
+   [
+    "mcs8m.bdash.a1led4"
+   ],
+   [
+    "mcs8m.bdash.a2led1"
+   ],
+   [
+    "mcs8m.bdash.a2led2"
+   ],
+   [
+    "mcs8m.bdash.a2led3"
+   ],
+   [
+    "mcs8m.bdash.a2led4"
+   ],
+   [
+    "mcs8m.bdash.a1active"
+   ],
+   [
+    "mcs8m.bdash.a2active"
+   ]
+  ]
+ },
+ {
+  "id": "mcs8m.bdash.health",
+  "type": "inject",
+  "z": "mcs8m.bdash.tab",
+  "name": "Check Health",
+  "props": [],
+  "repeat": "2",
+  "crontab": "",
+  "once": true,
+  "onceDelay": 0.1,
+  "topic": "",
+  "x": 130,
+  "y": 860,
+  "wires": [
+   [
+    "mcs8m.bdash.watchdog"
+   ]
+  ]
+ },
+ {
+  "id": "mcs8m.bdash.watchdog",
+  "type": "function",
+  "z": "mcs8m.bdash.tab",
+  "name": "Watchdog Logic",
+  "func": "const lastResponse = flow.get('last_response_time') || 0;\nconst now = Date.now();\nif (now - lastResponse > 5000) {\n    return { payload: \"OFFLINE\", color: \"red\" };\n} else {\n    return { payload: \"ONLINE\", color: \"green\" };\n}",
+  "outputs": 1,
+  "timeout": 0,
+  "noerr": 0,
+  "initialize": "",
+  "finalize": "",
+  "libs": [],
+  "x": 330,
+  "y": 860,
+  "wires": [
+   [
+    "mcs8m.bdash.status"
+   ]
+  ]
+ },
+ {
+  "id": "mcs8m.bdash.status",
+  "type": "ui_text",
+  "z": "mcs8m.bdash.tab",
+  "group": "mcs8m.bdash.gc",
+  "order": 1,
+  "width": "6",
+  "height": "1",
+  "name": "",
+  "label": "Switcher Status:",
+  "format": "<font color=\"{{msg.color}}\"><b>{{msg.payload}}</b></font>",
+  "layout": "row-spread",
+  "className": "",
+  "x": 560,
+  "y": 860,
+  "wires": []
+ },
+ {
+  "id": "mcs8m.bdash.qr",
+  "type": "ui_template",
+  "z": "mcs8m.bdash.tab",
+  "group": "mcs8m.bdash.gc",
+  "name": "Dashboard QR code",
+  "order": 5,
+  "width": "6",
+  "height": "6",
+  "format": "<div style=\"display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;\">\n    <canvas id=\"qr-code\"></canvas>\n    <div style=\"margin-top:15px;font-weight:bold;\">Scan to control</div>\n    <div id=\"qr-url\" style=\"font-size:0.8em;color:gray;\"></div>\n</div>\n<script src=\"https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js\"></script>\n<script>\n    (function(scope) {\n        setTimeout(function() {\n            // whatever address this dashboard was opened with, e.g. http://192.168.1.20:1880/ui\n            var url = window.location.origin + window.location.pathname.replace(/\\/$/, '');\n            document.getElementById('qr-url').textContent = url;\n            try {\n                new QRious({ element: document.getElementById('qr-code'), value: url, size: 200, level: 'H' });\n            } catch (e) {\n                document.getElementById('qr-code').outerHTML = '<p>QR library not available (offline?)</p>';\n            }\n        }, 500);\n    })(scope);\n</script>",
+  "storeOutMessages": true,
+  "fwdInMessages": true,
+  "resendOnRefresh": true,
+  "templateScope": "local",
+  "x": 150,
+  "y": 920,
+  "wires": [
+   []
+  ]
+ },
+ {
+  "id": "mcs8m.bdash.send",
+  "z": "mcs8m.bdash.tab",
+  "type": "function",
+  "name": "Send to bridge",
+  "outputs": 1,
+  "timeout": 0,
+  "noerr": 0,
+  "initialize": "",
+  "finalize": "",
+  "libs": [],
+  "x": 420,
+  "y": 240,
+  "wires": [
+   [
+    "mcs8m.bdash.sendreq"
+   ]
+  ],
+  "func": "// Turns a button ({aux, source}) or a mode choice ({app, mode}) into a POST to the bridge.\nconst base = (flow.get('bridge_url') || 'http://127.0.0.1:8765').replace(/\\/+$/, '');\nconst p = msg.payload || {};\nlet path;\nif (p.aux && p.source) path = `/api/aux/${p.aux}/${p.source}`;\nelse if (p.app && p.mode) path = `/api/mode/${p.app}/${p.mode}`;\nelse return null;\nconst token = flow.get('bridge_token');\nreturn { method: 'POST', url: base + path, payload: '', headers: token ? { Authorization: 'Bearer ' + token } : {} };"
+ },
+ {
+  "id": "mcs8m.bdash.sendreq",
+  "z": "mcs8m.bdash.tab",
+  "type": "http request",
+  "method": "use",
+  "ret": "obj",
+  "paytoqs": "ignore",
+  "url": "",
+  "tls": "",
+  "persist": false,
+  "proxy": "",
+  "insecureHTTPParser": false,
+  "authType": "",
+  "senderr": false,
+  "headers": [],
+  "name": "POST to bridge",
+  "x": 620,
+  "y": 240,
+  "wires": [
+   [
+    "mcs8m.bdash.sendresult"
+   ]
+  ]
+ },
+ {
+  "id": "mcs8m.bdash.sendresult",
+  "z": "mcs8m.bdash.tab",
+  "type": "function",
+  "name": "Command result",
+  "outputs": 1,
+  "timeout": 0,
+  "noerr": 0,
+  "initialize": "",
+  "finalize": "",
+  "libs": [],
+  "x": 820,
+  "y": 240,
+  "wires": [
+   []
+  ],
+  "func": "// 202 = sent; 409 = refused by the bridge (e.g. it would make a video loop) - show why.\nif (msg.statusCode === 202) { node.status({ fill: 'green', shape: 'dot', text: 'sent' }); return null; }\nconst why = (msg.payload && msg.payload.error) || ('HTTP ' + msg.statusCode);\nnode.status({ fill: 'red', shape: 'ring', text: why.slice(0, 60) });\nnode.warn(why);\nreturn null;"
+ },
+ {
+  "id": "mcs8m.bdash.poll",
+  "z": "mcs8m.bdash.tab",
+  "type": "inject",
+  "name": "Every 1 s",
+  "props": [],
+  "repeat": "1",
+  "crontab": "",
+  "once": true,
+  "onceDelay": "1",
+  "topic": "",
+  "x": 140,
+  "y": 760,
+  "wires": [
+   [
+    "mcs8m.bdash.ask"
+   ]
+  ]
+ },
+ {
+  "id": "mcs8m.bdash.ask",
+  "z": "mcs8m.bdash.tab",
+  "type": "function",
+  "name": "Ask bridge for state",
+  "outputs": 1,
+  "timeout": 0,
+  "noerr": 0,
+  "initialize": "",
+  "finalize": "",
+  "libs": [],
+  "x": 330,
+  "y": 760,
+  "wires": [
+   [
+    "mcs8m.bdash.statereq"
+   ]
+  ],
+  "func": "const base = (flow.get('bridge_url') || 'http://127.0.0.1:8765').replace(/\\/+$/, '');\nreturn { method: 'GET', url: base + '/api/state' };"
+ },
+ {
+  "id": "mcs8m.bdash.statereq",
+  "z": "mcs8m.bdash.tab",
+  "type": "http request",
+  "method": "use",
+  "ret": "obj",
+  "paytoqs": "ignore",
+  "url": "",
+  "tls": "",
+  "persist": false,
+  "proxy": "",
+  "insecureHTTPParser": false,
+  "authType": "",
+  "senderr": false,
+  "headers": [],
+  "name": "GET state",
+  "x": 520,
+  "y": 760,
+  "wires": [
+   [
+    "mcs8m.bdash.state"
+   ]
+  ]
+ },
+ {
+  "id": "mcs8m.bdash.state",
+  "z": "mcs8m.bdash.tab",
+  "type": "function",
+  "name": "Bridge state to dashboard",
+  "outputs": 5,
+  "timeout": 0,
+  "noerr": 0,
+  "initialize": "",
+  "finalize": "",
+  "libs": [],
+  "x": 740,
+  "y": 760,
+  "wires": [
+   [
+    "mcs8m.bdash.leds"
+   ],
+   [
+    "mcs8m.bdash.leds"
+   ],
+   [
+    "mcs8m.bdash.loopwarn"
+   ],
+   [
+    "mcs8m.bdash.vmixmode"
+   ],
+   [
+    "mcs8m.bdash.obsmode"
+   ]
+  ],
+  "func": "// Outputs: 1 Aux 1 source, 2 Aux 2 source (to the LED controller), 3 loop warning text,\n// 4 vMix mode, 5 OBS mode (to the dropdowns).\nconst s = msg.payload;\nif (msg.statusCode !== 200 || !s || typeof s !== 'object') { node.status({ fill: 'red', shape: 'ring', text: 'bridge not reachable' }); return null; }\nif (s.connected) flow.set('last_response_time', Date.now());       // drives Switcher Status (watchdog)\nnode.status({ fill: s.connected ? 'green' : 'yellow', shape: 'dot',\n              text: `PGM ${s.program} PST ${s.preset} AUX ${s.aux1}/${s.aux2}` + (s.connected ? '' : ' (switcher not responding)') });\nconst last = context.get('last') || {};\nconst changed = (k, v) => { const j = JSON.stringify(v === undefined ? null : v); if (k in last && last[k] === j) return false; last[k] = j; return true; };\n// names: the bridge's 'inputs' are the one place to set them; EDIT SETTINGS HERE only fills gaps\nif (s.names && Object.keys(s.names).length) flow.set('source_names', Object.assign({}, flow.get('source_names') || {}, s.names));\nconst out = [null, null, null, null, null];\nif (s.aux1 != null && changed('aux1', s.aux1)) out[0] = { payload: { aux: 1, source: s.aux1 } };\nif (s.aux2 != null && changed('aux2', s.aux2)) out[1] = { payload: { aux: 2, source: s.aux2 } };\nif (changed('loop', s.loop_warning)) out[2] = { payload: s.loop_warning || 'No video loop' , color: s.loop_warning ? 'red' : 'green' };\nconst apps = s.apps || {};\nif (changed('vmix', apps.vmix && apps.vmix.mode)) out[3] = { payload: apps.vmix ? apps.vmix.mode : 'off' };\nif (changed('obs', apps.obs && apps.obs.mode)) out[4] = { payload: apps.obs ? apps.obs.mode : 'off' };\ncontext.set('last', last);\nreturn out;"
+ },
+ {
+  "id": "mcs8m.bdash.loopwarn",
+  "z": "mcs8m.bdash.tab",
+  "type": "ui_text",
+  "group": "mcs8m.bdash.gc",
+  "order": 2,
+  "width": "6",
+  "height": "1",
+  "name": "",
+  "label": "Video loop:",
+  "format": "<font color=\"{{msg.color}}\"><b>{{msg.payload}}</b></font>",
+  "layout": "row-spread",
+  "className": "",
+  "x": 980,
+  "y": 800,
+  "wires": []
+ },
+ {
+  "id": "mcs8m.bdash.vmixmode",
+  "z": "mcs8m.bdash.tab",
+  "type": "ui_dropdown",
+  "name": "vMix mode",
+  "label": "vMix:",
+  "tooltip": "Who leads",
+  "place": "Select",
+  "group": "mcs8m.bdash.gc",
+  "order": 3,
+  "width": "6",
+  "height": "1",
+  "passthru": false,
+  "multiple": false,
+  "options": [
+   {
+    "label": "Sony leads",
+    "value": "switcher_leads",
+    "type": "str"
+   },
+   {
+    "label": "App leads",
+    "value": "app_leads",
+    "type": "str"
+   },
+   {
+    "label": "Both",
+    "value": "both",
+    "type": "str"
+   },
+   {
+    "label": "Off",
+    "value": "off",
+    "type": "str"
+   }
+  ],
+  "payload": "",
+  "topic": "vmix",
+  "topicType": "str",
+  "className": "",
+  "x": 980,
+  "y": 840,
+  "wires": [
+   [
+    "mcs8m.bdash.modechg"
+   ]
+  ]
+ },
+ {
+  "id": "mcs8m.bdash.obsmode",
+  "z": "mcs8m.bdash.tab",
+  "type": "ui_dropdown",
+  "name": "OBS mode",
+  "label": "OBS:",
+  "tooltip": "Who leads",
+  "place": "Select",
+  "group": "mcs8m.bdash.gc",
+  "order": 4,
+  "width": "6",
+  "height": "1",
+  "passthru": false,
+  "multiple": false,
+  "options": [
+   {
+    "label": "Sony leads",
+    "value": "switcher_leads",
+    "type": "str"
+   },
+   {
+    "label": "App leads",
+    "value": "app_leads",
+    "type": "str"
+   },
+   {
+    "label": "Both",
+    "value": "both",
+    "type": "str"
+   },
+   {
+    "label": "Off",
+    "value": "off",
+    "type": "str"
+   }
+  ],
+  "payload": "",
+  "topic": "obs",
+  "topicType": "str",
+  "className": "",
+  "x": 980,
+  "y": 880,
+  "wires": [
+   [
+    "mcs8m.bdash.modechg"
+   ]
+  ]
+ },
+ {
+  "id": "mcs8m.bdash.modechg",
+  "z": "mcs8m.bdash.tab",
+  "type": "function",
+  "name": "Mode chosen",
+  "outputs": 1,
+  "timeout": 0,
+  "noerr": 0,
+  "initialize": "",
+  "finalize": "",
+  "libs": [],
+  "x": 1160,
+  "y": 860,
+  "wires": [
+   [
+    "mcs8m.bdash.send"
+   ]
+  ],
+  "func": "// A dropdown was changed by a person (passthru is off, so updates from the bridge don't come back here).\nreturn { payload: { app: msg.topic, mode: msg.payload } };"
+ }
+]

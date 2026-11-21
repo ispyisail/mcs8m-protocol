@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MCS-8M Bridge</title>
+<style>
+  :root { --bg:#f5f5f4; --card:#fff; --ink:#1c1917; --muted:#78716c; --line:#e7e5e4;
+          --pgm:#dc2626; --pvw:#16a34a; --aux:#d97706; --btn:#f5f5f4; --warn:#fee2e2; --warnink:#991b1b; color-scheme: light; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#0c0a09; --card:#1c1917; --ink:#f5f5f4; --muted:#a8a29e; --line:#292524;
+          --btn:#292524; --warn:#450a0a; --warnink:#fecaca; color-scheme: dark; } }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.4 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+  main { max-width: 960px; margin: 0 auto; padding: 16px; }
+  h1 { font-size: 20px; margin: 4px 0 12px; display:flex; align-items:center; gap:10px; }
+  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0 0 10px; }
+  .dot { width:10px; height:10px; border-radius:50%; background:#a8a29e; display:inline-block; }
+  .dot.on { background:#16a34a; } .dot.off { background:#dc2626; }
+  .grid { display:grid; gap:12px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px; }
+  .tiles { display:grid; grid-template-columns: 1fr 1fr; gap:10px; }
+  .tile { border-radius:10px; padding:10px 12px; color:#fff; min-height:72px; }
+  .tile small { display:block; opacity:.85; font-size:12px; text-transform:uppercase; letter-spacing:.05em; }
+  .tile b { font-size:19px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:block; }
+  .pgm { background:var(--pgm); } .pvw { background:var(--pvw); }
+  .row { display:flex; flex-wrap:wrap; gap:6px; margin:8px 0; align-items:center; }
+  .row > span { min-width: 52px; color:var(--muted); font-size:13px; }
+  .row > span.dot, .row > span.meta { min-width: 0; flex: 0 0 auto; }
+  button { font:inherit; border:1px solid var(--line); background:var(--btn); color:var(--ink); border-radius:8px;
+           padding:8px 12px; cursor:pointer; min-height:40px; }
+  button:active { transform: translateY(1px); }
+  button.sel-pvw { background:var(--pvw); color:#fff; border-color:transparent; }
+  button.sel-aux { background:var(--aux); color:#fff; border-color:transparent; }
+  button.sel-mode { background:var(--ink); color:var(--card); border-color:transparent; }
+  button.big { font-weight:600; min-width:90px; }
+  .warn { background:var(--warn); color:var(--warnink); border-radius:10px; padding:12px 14px; font-weight:600; margin-bottom:12px; }
+  .meta { color:var(--muted); font-size:13px; }
+  .mute.muted { opacity:.55; text-decoration: line-through; }
+  .trans { font-size:13px; font-weight:600; color:var(--aux); }
+  #msg { min-height: 1.4em; color: var(--warnink); font-size:13px; margin-top:8px; }
+</style>
+</head>
+<body>
+<main>
+  <h1><span id="conn" class="dot"></span> MCS-8M Bridge <span id="trans" class="trans" hidden>TRANSITION</span></h1>
+  <div id="loop" class="warn" hidden></div>
+  <div class="grid">
+    <section class="card">
+      <h2>Switcher</h2>
+      <div class="tiles">
+        <div class="tile pgm"><small>Program (on air)</small><b id="pgm">–</b></div>
+        <div class="tile pvw"><small>Preset (next)</small><b id="pvw">–</b></div>
+      </div>
+      <div class="row" id="presets"></div>
+      <div class="row"><button class="big" data-post="cut">CUT</button><button class="big" data-post="auto">AUTO</button></div>
+    </section>
+    <section class="card">
+      <h2>Aux outputs</h2>
+      <div class="row" id="aux1"><span>Aux 1</span></div>
+      <div class="row" id="aux2"><span>Aux 2</span></div>
+      <h2 style="margin-top:14px">Audio</h2>
+      <div class="row" id="mutes"></div>
+    </section>
+    <section class="card" id="apps">
+      <h2>Who leads</h2>
+      <p class="meta" id="noapps">No vMix or OBS connection is enabled in config.json.</p>
+    </section>
+  </div>
+  <div id="msg"></div>
+</main>
+<script>
+(function () {
+  var S = null, MODES = [["switcher_leads", "Sony leads"], ["app_leads", "App leads"], ["both", "Both"], ["off", "Off"]];
+  var $ = function (id) { return document.getElementById(id); };
+  function token() { try { return localStorage.getItem("mcs8m_token") || ""; } catch (e) { return ""; } }
+  function post(path) {
+    var h = {}; if (token()) h.Authorization = "Bearer " + token();
+    return fetch("api/" + path, { method: "POST", headers: h }).then(function (r) {
+      return r.json().then(function (j) {
+        if (r.status === 401) {
+          $("msg").textContent = "This bridge needs its token: add ?token=… to the page address once.";
+        } else if (!r.ok) { $("msg").textContent = j.error || ("error " + r.status); }
+        else { $("msg").textContent = ""; }
+      });
+    }).catch(function () { $("msg").textContent = "bridge not reachable"; });
+  }
+  try { var t = new URLSearchParams(location.search).get("token"); if (t) localStorage.setItem("mcs8m_token", t); } catch (e) {}
+  document.addEventListener("click", function (e) { var b = e.target.closest("[data-post]"); if (b) post(b.dataset.post); });
+
+  function name(n) { return n == null ? "–" : (S.names[n] || ("Input " + n)); }
+  function inputs() { var k = Object.keys(S.names); return k.length ? k.map(Number).sort(function (a, b) { return a - b; }) : [1, 2, 3, 4, 5, 6, 7, 8]; }
+  function buttons(el, label, sel, cls, path) {
+    var keep = el.querySelector("span"); el.innerHTML = ""; if (keep) el.appendChild(keep);
+    inputs().forEach(function (n) {
+      var b = document.createElement("button"); b.textContent = name(n); b.dataset.post = path + n;
+      if (sel === n) b.className = cls; el.appendChild(b);
+    });
+  }
+  function render() {
+    $("conn").className = "dot " + (S.connected ? "on" : "off");
+    $("pgm").textContent = name(S.program); $("pvw").textContent = name(S.preset);
+    $("trans").hidden = !S.transition;
+    $("loop").hidden = !S.loop_warning; $("loop").textContent = S.loop_warning || "";
+    buttons($("presets"), "", S.preset, "sel-pvw", "preset/");
+    buttons($("aux1"), "", S.aux1, "sel-aux", "aux/1/");
+    buttons($("aux2"), "", S.aux2, "sel-aux", "aux/2/");
+    var m = $("mutes"); m.innerHTML = "";
+    Object.keys(S.muted).forEach(function (ch) {
+      var muted = S.muted[ch], b = document.createElement("button");
+      b.textContent = "CH" + ch; b.className = "mute" + (muted ? " muted" : "");
+      b.title = muted ? "muted - click to unmute" : "live - click to mute";
+      b.dataset.post = "mute/" + ch + "/" + (muted ? "off" : "on"); m.appendChild(b);
+    });
+    var apps = $("apps"), names = Object.keys(S.apps);
+    $("noapps").hidden = names.length > 0;
+    apps.querySelectorAll(".app").forEach(function (x) { x.remove(); });
+    names.forEach(function (a) {
+      var st = S.apps[a], div = document.createElement("div"); div.className = "app";
+      var head = document.createElement("div"); head.className = "row";
+      head.innerHTML = '<span class="dot ' + (st.connected ? "on" : "off") + '"></span><b>' + (a === "obs" ? "OBS" : "vMix") + "</b>";
+      var meta = document.createElement("span"); meta.className = "meta";
+      meta.textContent = st.connected ? ("program: " + (st.program == null ? "–" : st.program)) : "not connected";
+      head.appendChild(meta); div.appendChild(head);
+      var row = document.createElement("div"); row.className = "row";
+      MODES.forEach(function (md) {
+        var b = document.createElement("button"); b.textContent = md[1]; b.dataset.post = "mode/" + a + "/" + md[0];
+        if (st.mode === md[0]) b.className = "sel-mode"; row.appendChild(b);
+      });
+      div.appendChild(row); apps.appendChild(div);
+    });
+  }
+  function load() { return fetch("api/state").then(function (r) { return r.json(); }).then(function (s) { S = s; render(); }); }
+  var timer = null;
+  function connect() {
+    var es = new EventSource("api/events");
+    es.onmessage = function () { clearTimeout(timer); timer = setTimeout(load, 50); };
+    es.addEventListener("state", function (e) { S = JSON.parse(e.data); render(); });
+    es.onerror = function () { $("conn").className = "dot off"; };
+  }
+  load().then(connect).catch(function () { $("msg").textContent = "bridge not reachable"; setTimeout(function(){location.reload();}, 5000); });
+})();
+</script>
+</body>
+</html>

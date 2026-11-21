@@ -141,6 +141,26 @@ def main():
         sim.panel("p 2")                                            # operator cuts away on the Sony
         check("warning clears when the loop is broken", wait_for(lambda: c.state()["loop_warning"] is None))
 
+        print("control page and tally images")
+        with urllib.request.urlopen(c.base + "/") as r:
+            check("control page served", r.status == 200 and b"MCS-8M Bridge" in r.read())
+        prog = c.state()["program"]
+        with urllib.request.urlopen(f"{c.base}/api/tally/{prog}.png?size=36") as r:
+            body = r.read()
+            check("tally: on-air input is 'program'", r.headers["X-Tally"] == "program" and body[:8] == b"\x89PNG\r\n\x1a\n", r.headers["X-Tally"])
+        with urllib.request.urlopen(f"{c.base}/api/tally/{c.state()['aux1']}.png") as r:
+            pass
+        with urllib.request.urlopen(f"{c.base}/api/tally/aux/1/{c.state()['aux1']}.png") as r:
+            check("tally: aux image", r.headers["X-Tally"] == "aux", r.headers["X-Tally"])
+        idle = next(n for n in range(1, 15) if n not in (c.state()["program"], c.state()["preset"]))
+        with urllib.request.urlopen(f"{c.base}/api/tally/{idle}.png") as r:
+            check("tally: other input is 'idle'", r.headers["X-Tally"] == "idle")
+        try:
+            urllib.request.urlopen(c.base + "/api/tally/zz.png"); bad = 200
+        except urllib.error.HTTPError as e:
+            bad = e.code
+        check("tally: bad path -> 404", bad == 404)
+
         print("modes")
         check("set vmix mode both", c.post("/api/mode/vmix/both")[0] == 202 and c.state()["apps"]["vmix"]["mode"] == "both")
         check("bad mode -> 409", c.post("/api/mode/vmix/sideways")[0] == 409)

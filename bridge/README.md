@@ -9,7 +9,12 @@ MCS-8M ══ RS-232 ══ BRIDGE ──── OBS    (scenes, follow / control
                        └── dashboards, tally lights, scripts (HTTP + live events)
 ```
 
-> **Status: stages 1–3.** The core, the **vMix connector** and the **OBS connector** are done. They're tested against the [simulator](../tools/simulator.py) and stand-ins for vMix's TCP API ([`fake_vmix.py`](fake_vmix.py)) and obs-websocket v5 ([`fake_obs.py`](fake_obs.py)), at real switcher timing. They haven't been tested with a real MCS-8M, vMix or OBS yet.
+> **Status: complete (stages 1–4).** It includes:
+> - the core: state, API, live events, loop guard and lead modes;
+> - the **vMix** and **OBS** connectors;
+> - a **control page**, **tally images** for Stream Deck, a **Node-RED dashboard** version, and an **always-on service**.
+>
+> It's tested against the [simulator](../tools/simulator.py) and stand-ins for vMix ([`fake_vmix.py`](fake_vmix.py)) and OBS ([`fake_obs.py`](fake_obs.py)), at real switcher timing. It hasn't been tested with a real MCS-8M, vMix or OBS yet.
 
 ## Run it
 
@@ -18,7 +23,22 @@ cp bridge/config.example.json bridge/config.json     # then edit it
 python3 bridge/mcs8m_bridge.py                        # Windows: py bridge\mcs8m_bridge.py
 ```
 
-Open `http://<computer>:8765/` for a live status page.
+Open `http://<computer>:8765/` for the **control page**:
+- live program and preset;
+- preset, CUT and AUTO buttons;
+- Aux routing and channel mutes;
+- the **who-leads** switch for vMix and OBS;
+- a red banner if a video loop happens.
+
+It works on phones, and follows the device's light or dark setting. If you set a token, open the page once as `http://<computer>:8765/?token=<token>`, and the page will remember it.
+
+**Always on (Raspberry Pi / Linux):**
+
+```sh
+bash bridge/install-service.sh            # starts at boot, restarts if it stops
+journalctl -u mcs8m-bridge -f             # logs
+bash bridge/install-service.sh --remove
+```
 
 Python 3.7+ with no extra libraries; on Windows, `py -m pip install pyserial`. **Nothing else can use the serial port while the bridge runs.** That includes Node-RED's serial nodes, and Companion's TCP Serial module.
 
@@ -37,6 +57,8 @@ All commands are `POST` requests; `GET` is read-only.
 | `POST /api/aux/<1\|2>/<n>` | Route input *n* to Aux 1 or Aux 2 |
 | `POST /api/mute/<ch>/<on\|off>` | Mute (CH ON dark) or unmute channel 1–6 |
 | `POST /api/mode/<app>/<mode>` | Who leads, for `vmix` or `obs` (see below) |
+| `GET /api/tally/<n>.png` | Tally image: **red** if input *n* is on air, **green** if it's on preset, grey otherwise. Optional `?size=72`. For Stream Deck / Companion button feedback. |
+| `GET /api/tally/aux/<1\|2>/<n>.png` | **Amber** while Aux 1 or 2 shows input *n* |
 
 Replies: **202** sent · **409** refused, with the reason (bad value, or it would make a video loop) · **401** wrong token · **404** unknown command.
 
@@ -138,6 +160,11 @@ Then the bridge:
 - **refuses** a cut or AUTO TRANS to the return input while vMix is showing the capture input. Putting it on preset is still allowed.
 - **refuses** to switch vMix to the capture input while the Sony has the return on air.
 - **warns** (`loop_warning` in the state, and a `loop` event) if someone creates a loop by hand anyway. The warning clears once the loop is broken.
+
+## Dashboards and Stream Deck
+
+- **Node-RED:** [`mcs8m-dashboard-bridge-flow.json`](../examples/node-red/dashboard/) is the projector dashboard, talking to the bridge instead of the serial port. It adds the who-leads dropdowns and a video-loop line.
+- **Companion / Stream Deck:** see [the Companion guide](../docs/09-bitfocus-companion.md#recommended-through-the-mcs-8m-bridge). It uses plain HTTP actions, and the tally images for button feedback.
 
 ## Tests
 
