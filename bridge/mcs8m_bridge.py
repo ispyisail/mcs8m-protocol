@@ -19,7 +19,7 @@ Every change carries an "origin" (switcher = its panel, api, vmix, obs), which i
 what lets connectors avoid echo loops. A video-loop guard refuses changes that
 would put the vMix return on air while vMix shows the switcher (see README).
 
-Connectors: vmix.py (vMix TCP API). Python 3.7+ standard library only (Windows: pip install pyserial).
+Connectors: vmix.py (vMix TCP API), obs.py (obs-websocket v5). Python 3.7+ standard library only (Windows: pip install pyserial).
     python3 bridge/mcs8m_bridge.py -c bridge/config.json
 """
 import argparse, hmac, json, os, queue, sys, threading, time
@@ -63,6 +63,9 @@ class Bridge:
         self.expected = []              # [key, value, origin, deadline]
         self.stop = threading.Event()
         self.last_rx = 0.0
+        self.last_change = {}           # key -> monotonic time its value last changed
+        self.pending_reads = []         # [key, sent_time, value_at_send] for poll reads in flight
+        self.reread = []                # keys to read again (after a stale reply)
 
     # ---------------------------------------------------------------- apps (connectors)
     def register_app(self, name, mode):
@@ -140,6 +143,7 @@ class Bridge:
                     return
                 self.state[key] = value
             origin = self._origin(key, value)
+            self.last_change[key] = time.monotonic()
         ev = {"type": "change", "key": key, "value": value, "old": old, "origin": origin}
         if key in ("program", "preset", "aux1", "aux2") and value is not None:
             ev["name"] = self.name(value)
@@ -257,24 +261,64 @@ class Bridge:
     def _read_video(eff, cmd):
         return M.build_frame(M.VIDEO, M.video_msg(eff, cmd))
 
+    def read_frame_for(self, key):
+        rev = {v: k for k, v in self.XPT_KEYS.items()}
+        if key in rev:
+            return self._read_video(*rev[key])
+        if key.startswith("muted."):
+            return M.build_frame(M.AUDIO, M.audio_msg(0x93, int(key.split(".")[1]) - 1, 0))
+        return None
+
+    def _note_read(self, frame, now):
+        msg = frame[9:-2]
+        if frame[4] == M.VIDEO[0]:
+            key = self.XPT_KEYS.get((msg[2], msg[3]))
+        else:
+            key = f"muted.{msg[1] + 1}" if msg[0] == 0x93 else None
+        if key:
+            with self.lock:
+                self.pending_reads.append([key, now, self._current(key)])
+
     def poll_frames(self):
         v = self._read_video
         return [v(M.ME, M.BUS_A), v(M.ME, M.BUS_B), v(M.AUX1, M.BUS_A), v(M.AUX2, M.BUS_A)] + \
                [M.build_frame(M.AUDIO, M.audio_msg(0x93, ch, 0)) for ch in range(6)]
 
     # ---------------------------------------------------------------- serial worker
+    XPT_KEYS = {(M.ME, M.BUS_A): "program", (M.ME, M.BUS_B): "preset", (M.AUX1, M.BUS_A): "aux1", (M.AUX2, M.BUS_A): "aux2"}
+
+    def _key_value(self, kind, eff, cmd, data):
+        if kind == "video" and len(data) >= 2 and (eff, cmd) in self.XPT_KEYS:
+            return self.XPT_KEYS[(eff, cmd)], data[-1]
+        if kind == "video" and eff == 0x20 and cmd == 0x37 and len(data) >= 3:
+            return "transition", data[2] == 1
+        if kind == "audio" and cmd == 0x13 and len(data) >= 2 and data[0] < 6:
+            return f"muted.{data[0] + 1}", data[1] == 1
+        return None, None
+
+    def _current(self, key):
+        return self.state["muted"][key.split(".")[1]] if key.startswith("muted.") else self.state.get(key)
+
     def receive(self, f):
         """Turn any frame from the switcher (reply, answer to a write, or push) into state."""
-        self.last_rx = time.monotonic()
-        if f.kind == "video" and len(f.data) >= 2 and f.cmd in (M.BUS_A, M.BUS_B):
-            key = {(M.ME, M.BUS_A): "program", (M.ME, M.BUS_B): "preset",
-                   (M.AUX1, M.BUS_A): "aux1", (M.AUX2, M.BUS_A): "aux2"}.get((f.eff, f.cmd))
-            if key:
-                self.set(key, f.data[-1])
-        elif f.kind == "video" and f.eff == 0x20 and f.cmd == 0x37 and len(f.data) >= 3:
-            self.set("transition", f.data[2] == 1)
-        elif f.kind == "audio" and f.cmd == 0x13 and len(f.data) >= 2 and f.data[0] < 6:
-            self.set(f"muted.{f.data[0] + 1}", f.data[1] == 1)
+        now = self.last_rx = time.monotonic()
+        key, value = self._key_value(f.kind, f.eff, f.cmd, f.data)
+        if key is None:
+            return
+        with self.lock:
+            self.pending_reads = [p for p in self.pending_reads if now - p[1] < 2.5]
+            # A poll read takes ~1 s to answer. If the value changed after the read was sent (a panel
+            # change, or a command), a reply carrying the OLD value is stale: ignore it and read again.
+            stale = next((p for p in self.pending_reads if p[0] == key and self.last_change.get(key, 0) > p[1]
+                          and value == p[2] and value != self._current(key)), None)
+            if stale:
+                self.pending_reads.remove(stale)
+                self.reread.append(key)
+                return
+            mine = next((p for p in self.pending_reads if p[0] == key), None)
+            if mine and value == self._current(key):
+                self.pending_reads.remove(mine)
+        self.set(key, value)
 
     @staticmethod
     def _same_request(req, f):
@@ -308,8 +352,14 @@ class Bridge:
                     now = time.monotonic()
                     if now >= next_poll and not todo:
                         todo, next_poll = self.poll_frames(), now + poll_every
+                    with self.lock:
+                        while self.reread:
+                            frame = self.read_frame_for(self.reread.pop(0))
+                            if frame and frame not in todo:
+                                todo.insert(0, frame)
                     if todo and (outstanding is None or now > outstanding[1]):
                         f = todo.pop(0)                             # one read in flight at a time
+                        self._note_read(f, now)
                         port.write(f)
                         outstanding = (f, now + (1.6 if f[4] == M.VIDEO[0] else 0.3))
                     for fr in parser.feed(port.read(0.05)):
@@ -466,6 +516,10 @@ def start(cfg, http=True):
     if vm.get("enabled"):
         import vmix
         vmix.VmixConnector(b, vm, log=lambda *a: log(*a)).start()
+    ob = {k: v for k, v in (cfg.get("obs") or {}).items() if not k.startswith("_")}
+    if ob.get("enabled"):
+        import obs
+        obs.ObsConnector(b, ob, log=lambda *a: log(*a)).start()
     threading.Thread(target=b.run_serial, name="serial", daemon=True).start()
     srv = None
     if http:

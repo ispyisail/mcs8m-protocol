@@ -36,6 +36,8 @@ def main():
         check("vMix connected and its program read", wait_for(lambda: c.state()["apps"].get("vmix", {}).get("connected")
                                                               and c.state()["apps"]["vmix"]["program"] == "1"), c.state()["apps"])
         check("switcher state read", wait_for(lambda: c.state()["program"] == 2))
+        time.sleep(0.5)
+        check("no lower third for the first reading at start-up", not calls(vm, "SetText"), vm.calls)
 
         print("switcher leads: lower third with the camera name")
         vm.calls.clear()

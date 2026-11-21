@@ -8,6 +8,7 @@ import json, os, subprocess, sys, threading, time, urllib.error, urllib.request
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import mcs8m_bridge as B                                        # noqa: E402
+import mcs8m as M                                                # noqa: E402
 
 FAILS = []
 
@@ -146,6 +147,20 @@ def main():
     finally:
         bridge.stop.set()
         sim.close()
+    print("stale poll replies (a reply that left before a panel change)")
+    b = B.Bridge({"inputs": {}})
+    prog = lambda n: M.Frame(M.build_frame(M.VIDEO, M.video_msg(M.ME, 0x80, 0x40, n)))
+    b.receive(prog(2))
+    b._note_read(b.read_frame_for("program"), time.monotonic())     # poll read sent while program = 2
+    time.sleep(0.01)
+    b.receive(prog(1))                                               # operator cuts to 1 (push)
+    b.receive(prog(2))                                               # ...then the old poll's reply says 2
+    check("stale reply ignored (program stays 1)", b.state["program"] == 1, b.state["program"])
+    check("...and a fresh read is queued", b.reread == ["program"], b.reread)
+    b2 = B.Bridge({"inputs": {}})
+    b2.receive(prog(2)); b2._note_read(b2.read_frame_for("program"), time.monotonic())
+    b2.receive(prog(5))                                              # a genuine new value in the reply
+    check("a reply with a new value is accepted", b2.state["program"] == 5 and not b2.reread)
     print(f"\n{'ALL PASSED' if not FAILS else str(len(FAILS)) + ' FAILED: ' + ', '.join(FAILS)}")
     sys.exit(1 if FAILS else 0)
 

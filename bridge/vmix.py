@@ -57,13 +57,14 @@ class VmixConnector:
         # the lower third is harmless, so it follows every program change; the extra actions
         # only run when the Sony leads, and never for changes vMix itself caused (echo)
         run_actions = ev.get("origin") != "vmix" and self.mode() in ("switcher_leads", "both")
-        self.sendq.put(("follow", (ev["value"], run_actions)))
+        first = ev.get("old") is None                           # the bridge's first reading, not a real cut
+        self.sendq.put(("follow", (ev["value"], run_actions, first)))
 
     def follow(self, item):
-        n, run_actions = item
+        n, run_actions, first = item
         name = self.b.name(n)
         ret = (self.b.cfg.get("loop_protection") or {}).get("switcher_input_from_vmix")
-        if self.lt.get("enabled") and str(n) != str(ret):
+        if self.lt.get("enabled") and str(n) != str(ret) and not first:
             only = self.lt.get("for_inputs") or []
             if not only or n in only:
                 self.show_lower_third(name)

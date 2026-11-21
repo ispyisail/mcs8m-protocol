@@ -57,5 +57,28 @@
       "transition": "cut",
       "_transition": "cut = hot cut (default) | auto = preset + AUTO TRANS (auto_frames, default 30)"
     }
+  },
+  "obs": {
+    "enabled": false,
+    "_enabled": "Set to true to connect to OBS (needs OBS 28+: Tools > WebSocket Server Settings > Enable).",
+    "host": "192.168.1.60",
+    "port": 4455,
+    "password": "",
+    "_host": "The OBS computer's IP (127.0.0.1 if on this computer). password: from OBS's WebSocket Server Settings > Show Connect Info.",
+    "mode": "switcher_leads",
+    "_mode": "switcher_leads | app_leads | both | off. Can be changed live: POST /api/mode/obs/<mode>",
+    "scenes": {
+      "1": "Camera 1",
+      "2": "Camera 2",
+      "3": "Camera 3",
+      "4": "Camera 4",
+      "_help": "Sony input -> OBS scene name (exactly as in OBS). Used in both directions. Inputs or scenes not listed are ignored."
+    },
+    "preview_follows_preset": false,
+    "_preview_follows_preset": "In OBS Studio Mode, also put the Sony's preset on OBS's preview.",
+    "control": {
+      "transition": "cut",
+      "_transition": "When OBS leads: cut = hot cut (default) | auto = preset + AUTO TRANS (auto_frames, default 30)"
+    }
   }
 }
