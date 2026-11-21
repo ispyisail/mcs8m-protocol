@@ -1,23 +1,61 @@
 {
   "_help": "Copy to config.json and edit. Keys starting with _ are comments. See bridge/README.md.",
-
   "serial_port": "/dev/ttyUSB0",
   "_serial_port": "Linux: /dev/ttyUSB0 or better /dev/serial/by-id/...; Windows: COM3. Nothing else may use this port.",
-
-  "http": { "host": "0.0.0.0", "port": 8765, "token": "" },
+  "http": {
+    "host": "0.0.0.0",
+    "port": 8765,
+    "token": ""
+  },
   "_http": "token: if set, every POST must send 'Authorization: Bearer <token>' or ?token=<token>.",
-
   "poll_seconds": 10,
   "_poll_seconds": "Safety-net poll. Program changes and transitions arrive instantly from the switcher anyway.",
-
   "inputs": {
-    "1": "Camera 1", "2": "Camera 2", "3": "Camera 3", "4": "Camera 4",
-    "5": "Input 5", "6": "Input 6", "7": "Input 7", "8": "Input 8"
+    "1": "Camera 1",
+    "2": "Camera 2",
+    "3": "Camera 3",
+    "4": "Camera 4",
+    "5": "Input 5",
+    "6": "Input 6",
+    "7": "Input 7",
+    "8": "Input 8"
   },
-
   "loop_protection": {
     "switcher_input_from_vmix": null,
     "vmix_input_from_switcher": null
   },
-  "_loop_protection": "switcher_input_from_vmix: the MCS-8M input (1-14) that carries vMix's output back. vmix_input_from_switcher: the vMix input (number) fed by the capture card with the MCS-8M program. When both are set, the bridge refuses any change that would show each in the other (a video loop), and warns if one happens anyway."
+  "_loop_protection": "switcher_input_from_vmix: the MCS-8M input (1-14) that carries vMix's output back. vmix_input_from_switcher: the vMix input (number) fed by the capture card with the MCS-8M program. When both are set, the bridge refuses any change that would show each in the other (a video loop), and warns if one happens anyway.",
+  "vmix": {
+    "enabled": false,
+    "_enabled": "Set to true to connect to vMix.",
+    "host": "192.168.1.50",
+    "port": 8099,
+    "_host": "The vMix computer's IP address. vMix's TCP API is always on port 8099.",
+    "mode": "switcher_leads",
+    "_mode": "switcher_leads | app_leads | both | off. Can be changed live: POST /api/mode/vmix/<mode>",
+    "lower_third": {
+      "enabled": true,
+      "input": "Lower Third",
+      "field": "Headline.Text",
+      "overlay": 1,
+      "seconds": 6,
+      "for_inputs": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "_help": "When the Sony's program changes, put the input's name (from 'inputs' above) into this vMix title and show it on overlay channel 'overlay' for 'seconds' (0 = leave it up). input: the title's name or number in vMix. field: the text field's name, as shown in vMix's title editor (often Headline.Text or Message.Text). for_inputs: only for these Sony inputs ([] = all). Never shown for the vMix return input."
+    },
+    "on_program": {
+      "_help": "Optional extra vMix functions to run when the Sony's program changes (switcher_leads / both). Key = Sony input, or * for every input. {input} and {name} are replaced. Cut functions are checked by the loop guard. Example: \"3\": [{\"function\": \"OverlayInput2In\", \"Input\": \"Camera 3 logo\"}]"
+    },
+    "control": {
+      "vmix_to_switcher": {
+        "_help": "vMix input number -> Sony input, used when vMix leads (app_leads / both). Example: \"5\": 1"
+      },
+      "transition": "cut",
+      "_transition": "cut = hot cut (default) | auto = preset + AUTO TRANS (auto_frames, default 30)"
+    }
+  }
 }

@@ -19,7 +19,7 @@ Every change carries an "origin" (switcher = its panel, api, vmix, obs), which i
 what lets connectors avoid echo loops. A video-loop guard refuses changes that
 would put the vMix return on air while vMix shows the switcher (see README).
 
-Python 3.7+ standard library only (Windows: pip install pyserial).
+Connectors: vmix.py (vMix TCP API). Python 3.7+ standard library only (Windows: pip install pyserial).
     python3 bridge/mcs8m_bridge.py -c bridge/config.json
 """
 import argparse, hmac, json, os, queue, sys, threading, time
@@ -462,6 +462,10 @@ def load_config(path):
 def start(cfg, http=True):
     """Start the bridge (and its HTTP server). Returns (bridge, server)."""
     b = Bridge(cfg)
+    vm = {k: v for k, v in (cfg.get("vmix") or {}).items() if not k.startswith("_")}
+    if vm.get("enabled"):
+        import vmix
+        vmix.VmixConnector(b, vm, log=lambda *a: log(*a)).start()
     threading.Thread(target=b.run_serial, name="serial", daemon=True).start()
     srv = None
     if http:

@@ -3,13 +3,13 @@
 A small always-on service that **owns the switcher's serial port** and shares it over the network. Dashboards, Stream Deck / Companion, and (coming next) **vMix** and **OBS** can then all see and control the switcher at the same time.
 
 ```
-                       ┌── vMix   (stage 2: follow / control)
+                       ┌── vMix   (lower thirds, follow / control)
 MCS-8M ══ RS-232 ══ BRIDGE ──── OBS    (stage 3: follow / control)
                        ├── Companion / Stream Deck (simple HTTP, no hex)
                        └── dashboards, tally lights, scripts (HTTP + live events)
 ```
 
-> **Status: stage 1 (core).** The state tracking, HTTP API, live events, video-loop guard and lead modes are done, and tested against the [simulator](../tools/simulator.py) at real switcher timing. The vMix and OBS connectors come next. Not yet tested on a real MCS-8M.
+> **Status: stages 1–2.** The core and the **vMix connector** are done, and tested against the [simulator](../tools/simulator.py) and a stand-in for vMix's TCP API ([`fake_vmix.py`](fake_vmix.py)) at real switcher timing. OBS comes next. Not yet tested with a real MCS-8M or real vMix.
 
 ## Run it
 
@@ -65,6 +65,41 @@ Each app (vMix, OBS) has its own mode, set in the config and changeable live wit
 | `both` | Whoever changed last wins. The bridge ignores the echo of changes it made itself, so they don't bounce back. |
 | `off` | Watch only |
 
+## vMix
+
+The bridge connects to vMix's TCP API (port 8099, always on in vMix). Turn it on in `config.json`:
+
+```json
+"vmix": {
+  "enabled": true, "host": "192.168.1.50", "mode": "switcher_leads",
+  "lower_third": { "enabled": true, "input": "Lower Third", "field": "Headline.Text",
+                   "overlay": 1, "seconds": 6, "for_inputs": [1, 2, 3, 4] },
+  "control": { "vmix_to_switcher": { "5": 1, "6": 2 }, "transition": "cut" }
+}
+```
+
+**Lower third with the camera's name.** When the Sony's program changes, the bridge puts the input's name (from `inputs`) into a vMix title, shows it on an overlay channel, and hides it again after `seconds`. Set it up in vMix like this:
+1. **Add Input → Title** and pick a lower-third style. Rename the input to `Lower Third`, or put its number in `input`.
+2. **The field name:** open the title's editor and look at the text field's name, e.g. `Headline.Text` or `Message.Text`. Put it in `field`.
+3. **Which inputs:** `for_inputs` limits it to the camera inputs; `[]` means all of them. It's never shown for the vMix return input.
+
+It follows every program change, whoever made it, unless the mode is `off`.
+
+**Extra actions (optional).** `on_program` runs any [vMix function](https://www.vmix.com/help26/ShortcutFunctionReference.html) when the Sony cuts to a given input (`"*"` means any input). `{input}` and `{name}` are replaced with the input's number and name:
+
+```json
+"on_program": { "3": [ { "function": "OverlayInput2In", "Input": "Pastor logo" } ],
+                "*": [ { "function": "SetText", "Input": "Status", "SelectedName": "Message.Text", "Value": "On air: {name}" } ] }
+```
+
+These run only when the Sony leads (`switcher_leads` or `both`), and never for changes vMix itself caused. Cut functions (`CutDirect`, `Cut`, `Fade`…) are checked by the loop guard.
+
+**vMix leads.** In `app_leads` or `both` mode, when vMix's program input changes, the Sony cuts to the input mapped in `vmix_to_switcher` (vMix input number → Sony input). `"transition": "cut"` is a hot cut (the default); `"auto"` uses preset plus AUTO TRANS. vMix inputs that aren't mapped leave the Sony alone.
+
+**How it reads vMix.** It subscribes to vMix's tally, and on each change reads vMix's XML state to get the **program input**. Tally alone also marks overlays as "on program", so it can't be used to tell which input is on air.
+
+**No ping-pong.** Changes the bridge causes on one side are recognised when they echo back from the other side, and aren't passed on again. The tests check this in every mode.
+
 ## Video-loop protection
 
 vMix gets the Sony's program through a capture card and sends its output back into a Sony input. If the Sony puts that return on air **while** vMix is showing the capture input, the picture feeds back on itself. Set:
@@ -84,8 +119,11 @@ Then the bridge:
 ## Tests
 
 ```sh
-python3 bridge/test_bridge.py               # fast simulator
-REAL_SPEED=1 python3 bridge/test_bridge.py  # real ~1 s video timing
+python3 bridge/test_bridge.py               # core (fast simulator)
+python3 bridge/test_vmix.py                 # vMix connector (simulator + fake_vmix.py)
+REAL_SPEED=1 python3 bridge/test_vmix.py    # with real ~1 s video timing
 ```
 
-They cover state tracking, every command, where each change came from, panel changes, the token, bad input, the loop guard (refused cut, allowed preset, refused AUTO TRANS, loop warning raised and cleared), and modes.
+`fake_vmix.py` can also be run by hand (`python3 bridge/fake_vmix.py`, then type `cut 5`) to try the bridge without vMix.
+
+The core tests cover state tracking, every command, where each change came from, panel changes, the token, bad input, the loop guard (refused cut, allowed preset, refused AUTO TRANS, loop warning raised and cleared), and modes. The vMix tests cover the lower third (text, show, hide), extra actions, each lead mode, no ping-pong in either direction, the loop guard against vMix's real program, and reconnecting.
