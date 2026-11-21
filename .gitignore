@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+# dumps and probe results contain your own switcher state
+*.json
+!tools/values.json
+*.pdf
