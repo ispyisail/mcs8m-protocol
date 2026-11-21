@@ -42,6 +42,26 @@ bash bridge/install-service.sh --remove
 
 Python 3.7+ with no extra libraries; on Windows, `py -m pip install pyserial`. **Nothing else can use the serial port while the bridge runs.** That includes Node-RED's serial nodes, and Companion's TCP Serial module.
 
+## Moving an existing Node-RED setup to the bridge
+
+If Node-RED already controls the switcher through its serial nodes, the bridge can't use the port until that stops. One command does the whole move:
+
+```sh
+bash bridge/switch-to-bridge.sh --dry-run    # see exactly what would change
+bash bridge/switch-to-bridge.sh              # do it
+bash bridge/switch-to-bridge.sh --undo       # put everything back exactly as it was
+```
+
+It:
+1. stops Node-RED and **backs up `flows.json`**;
+2. **disables only the tabs that use a serial port**, keeping every other flow, and hides their now-empty dashboard page;
+3. **adds** the [bridge version of the dashboard](../examples/node-red/dashboard/), pointed at this bridge's port and token. Running the tool again replaces it, with no duplicates;
+4. installs and starts the bridge service, then starts Node-RED and checks that the bridge answers.
+
+`--undo` always goes back to the setup from **before the first switch**, byte for byte, even if you ran the switch more than once. Use `--flow FILE` to add your own customised bridge dashboard instead of the standard one.
+
+✅ Rehearsed on a copy of a real venue's flow, with stand-ins for Node-RED, `sudo` and systemd: dry run, switch, re-run, undo (byte-for-byte), and a setup with no serial port. A venue-specific version of the same steps was used to move a real Pi onto the bridge.
+
 ## API
 
 All commands are `POST` requests; `GET` is read-only.

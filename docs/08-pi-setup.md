@@ -64,6 +64,16 @@ Use `--dry-run` to see what it would do without changing anything.
 3. Make sure the switcher has **Serial Cmd Group = Rem 1** ([Hardware](07-hardware.md#required-enable-serial-control-on-the-switcher)).
 4. Open `http://nodered.local:1880/ui`. *Switcher Status* should say **ONLINE**.
 
+## Optional: add the bridge (vMix, OBS, Stream Deck)
+
+To use the [MCS-8M bridge](../bridge/), so that vMix, OBS and Companion can share the switcher with the dashboard, set up `bridge/config.json`, then move Node-RED onto it in one step:
+
+```sh
+cp ~/mcs8m-protocol/bridge/config.example.json ~/mcs8m-protocol/bridge/config.json
+nano ~/mcs8m-protocol/bridge/config.json          # serial port, input names (vMix/OBS later)
+bash ~/mcs8m-protocol/bridge/switch-to-bridge.sh  # --undo puts it all back
+```
+
 ## 5. Recommended: secure the editor
 
 By default, anyone on your network can open the Node-RED editor and change the flows. Set an admin password:

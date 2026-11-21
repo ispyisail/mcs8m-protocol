@@ -29,7 +29,7 @@ It has been used on a real MCS-8M driving two projectors: Aux 1 to the audience 
 | `mcs8m-dashboard-flow.json` | the **serial port** directly | Node-RED is the only thing controlling the switcher |
 | `mcs8m-dashboard-bridge-flow.json` | the **[MCS-8M bridge](../../../bridge/)** over HTTP | you also want vMix, OBS or Stream Deck at the same time |
 
-The bridge version looks the same, and adds a **who-leads** dropdown for vMix and OBS, plus a **video-loop** line in the Connection group. Set `bridge_url` (and `bridge_token`, if you use one) in **EDIT SETTINGS HERE**. Input names come from the bridge's `config.json`. The bridge version doesn't need the serial add-on, but it has no DOWNLOAD ALL SETTINGS button, because the bridge owns the port.
+Already running the serial version? `bash bridge/switch-to-bridge.sh` swaps it for the bridge version, with a backup and `--undo`. The bridge version looks the same, and adds a **who-leads** dropdown for vMix and OBS, plus a **video-loop** line in the Connection group. Set `bridge_url` (and `bridge_token`, if you use one) in **EDIT SETTINGS HERE**. Input names come from the bridge's `config.json`. The bridge version doesn't need the serial add-on, but it has no DOWNLOAD ALL SETTINGS button, because the bridge owns the port.
 
 ✅ Its function nodes were tested against a running bridge (with the simulator and the fake vMix): button → Aux change → LED, names, mode dropdown, refused-command message, loop warning on and off, and an unreachable bridge.
 
