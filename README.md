@@ -19,10 +19,23 @@ It fixes the errors in Sony's protocol manual, documents behaviour the manual le
 
 The other corrections are in [docs/04-errata.md](docs/04-errata.md).
 
+## New here?
+
+Start with **[Getting started](docs/00-getting-started.md)**: wiring, enabling serial control, and your first read in about 15 minutes. You can also try everything without a switcher, using the built-in simulator.
+
+```sh
+python3 examples/python/01_read_program.py /dev/ttyUSB0
+Program (on air): 2
+Preset  (next):   7
+```
+
+Ready-to-use code in **Python, Node.js and Node-RED** is in [examples/](examples/).
+
 ## Contents
 
 | Document | What's in it |
 |---|---|
+| [00 Getting started](docs/00-getting-started.md) | Hardware, enabling Rem 1, first read, troubleshooting, simulator |
 | [01 Framing](docs/01-framing.md) | Serial settings, wiring, enabling remote control, frame layout, checksum, timing, how to parse the stream |
 | [02 Video commands](docs/02-video.md) | Crosspoints, transitions, wipe patterns and directions, snapshots |
 | [03 Audio commands](docs/03-audio.md) | Faders, mute, trim, filters, EQ, pan, monitor |
@@ -50,6 +63,7 @@ Tested on: MCS-8M, main application version 1.01 or later, RS-232 at 38400 8N1 t
 | [`tools/mcs8m_dump.py`](tools/mcs8m_dump.py) | Reads every documented setting (118 reads, about 31 s) and writes a JSON file. **Read-only.** |
 | [`tools/mcs8m_probe.py`](tools/mcs8m_probe.py) | Searches for undocumented read commands. **Read-only**, can be resumed, and stops if anything unexpected happens. |
 | [`tools/values.json`](tools/values.json) | Code-to-value tables (fader dB, EQ frequencies, pan…), made by `tools/gen_values.py` |
+| [`tools/simulator.py`](tools/simulator.py) | A fake MCS-8M on a virtual serial port, for development without hardware |
 | [`tools/check_docs.py`](tools/check_docs.py) | Checks the byte count and checksum of every frame quoted in these docs |
 
 The two serial tools need Python 3 on Linux or macOS and nothing else (they use `termios`, not pyserial). Both refuse to send any command code the protocol treats as a write.
