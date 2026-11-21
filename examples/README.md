@@ -33,6 +33,12 @@ with MCS8M("/dev/ttyUSB0") as sw:
 
 ## Node-RED
 
+### Ready-made dashboard
+
+**[`node-red/dashboard/`](node-red/dashboard/)** is a complete phone and tablet control panel. It has Aux 1 and Aux 2 source buttons with LEDs, shows changes made on the switcher's own panel almost at once, and includes a connection watchdog, a QR code and a read-only DOWNLOAD ALL SETTINGS button. It has been used on a real switcher. **Start here if you just want projector control.**
+
+### Minimal flow (for building your own)
+
 [`node-red/mcs8m-example-flow.json`](node-red/mcs8m-example-flow.json) is a minimal flow:
 
 ```

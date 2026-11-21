@@ -1,0 +1,295 @@
+[
+ {
+  "id": "mcs8m.example.tab",
+  "type": "tab",
+  "label": "MCS-8M example",
+  "disabled": false,
+  "info": "Minimal example for the Sony MCS-8M RS-232 protocol.\nNeeds node-red-node-serialport. Set your serial port in the 'MCS-8M port' config node.\nSee https://github.com/ispyisail/mcs8m-protocol"
+ },
+ {
+  "id": "mcs8m.port",
+  "type": "serial-port",
+  "name": "MCS-8M port",
+  "serialport": "/dev/ttyUSB0",
+  "serialbaud": "38400",
+  "databits": "8",
+  "parity": "none",
+  "stopbits": "1",
+  "waitfor": "",
+  "dtr": "none",
+  "rts": "none",
+  "cts": "none",
+  "dsr": "none",
+  "newline": "20",
+  "bin": "bin",
+  "out": "time",
+  "addchar": "",
+  "responsetimeout": "10000"
+ },
+ {
+  "id": "mcs8m.note",
+  "z": "mcs8m.example.tab",
+  "type": "comment",
+  "name": "Video replies take ~1 s: the delay node spaces requests 1.2 s apart. Panel changes arrive on their own.",
+  "info": "",
+  "x": 380,
+  "y": 40,
+  "wires": []
+ },
+ {
+  "id": "mcs8m.i1",
+  "z": "mcs8m.example.tab",
+  "type": "inject",
+  "name": "Read program",
+  "props": [
+   {
+    "p": "payload"
+   }
+  ],
+  "repeat": "",
+  "crontab": "",
+  "once": false,
+  "onceDelay": 0.1,
+  "topic": "",
+  "payload": "{\"read\":\"program\"}",
+  "payloadType": "json",
+  "x": 170,
+  "y": 100,
+  "wires": [
+   [
+    "mcs8m.build"
+   ]
+  ]
+ },
+ {
+  "id": "mcs8m.i2",
+  "z": "mcs8m.example.tab",
+  "type": "inject",
+  "name": "Read preset",
+  "props": [
+   {
+    "p": "payload"
+   }
+  ],
+  "repeat": "",
+  "crontab": "",
+  "once": false,
+  "onceDelay": 0.1,
+  "topic": "",
+  "payload": "{\"read\":\"preset\"}",
+  "payloadType": "json",
+  "x": 170,
+  "y": 140,
+  "wires": [
+   [
+    "mcs8m.build"
+   ]
+  ]
+ },
+ {
+  "id": "mcs8m.i3",
+  "z": "mcs8m.example.tab",
+  "type": "inject",
+  "name": "Read Aux 1",
+  "props": [
+   {
+    "p": "payload"
+   }
+  ],
+  "repeat": "",
+  "crontab": "",
+  "once": false,
+  "onceDelay": 0.1,
+  "topic": "",
+  "payload": "{\"read\":\"aux\",\"aux\":1}",
+  "payloadType": "json",
+  "x": 170,
+  "y": 180,
+  "wires": [
+   [
+    "mcs8m.build"
+   ]
+  ]
+ },
+ {
+  "id": "mcs8m.i4",
+  "z": "mcs8m.example.tab",
+  "type": "inject",
+  "name": "Read CH1 mute",
+  "props": [
+   {
+    "p": "payload"
+   }
+  ],
+  "repeat": "",
+  "crontab": "",
+  "once": false,
+  "onceDelay": 0.1,
+  "topic": "",
+  "payload": "{\"read\":\"mute\",\"ch\":1}",
+  "payloadType": "json",
+  "x": 170,
+  "y": 220,
+  "wires": [
+   [
+    "mcs8m.build"
+   ]
+  ]
+ },
+ {
+  "id": "mcs8m.i5",
+  "z": "mcs8m.example.tab",
+  "type": "inject",
+  "name": "Read faders",
+  "props": [
+   {
+    "p": "payload"
+   }
+  ],
+  "repeat": "",
+  "crontab": "",
+  "once": false,
+  "onceDelay": 0.1,
+  "topic": "",
+  "payload": "{\"read\":\"faders\"}",
+  "payloadType": "json",
+  "x": 170,
+  "y": 260,
+  "wires": [
+   [
+    "mcs8m.build"
+   ]
+  ]
+ },
+ {
+  "id": "mcs8m.i6",
+  "z": "mcs8m.example.tab",
+  "type": "inject",
+  "name": "WRITE: Aux 1 = source 3",
+  "props": [
+   {
+    "p": "payload"
+   }
+  ],
+  "repeat": "",
+  "crontab": "",
+  "once": false,
+  "onceDelay": 0.1,
+  "topic": "",
+  "payload": "{\"aux\":1,\"source\":3}",
+  "payloadType": "json",
+  "x": 170,
+  "y": 320,
+  "wires": [
+   [
+    "mcs8m.build"
+   ]
+  ]
+ },
+ {
+  "id": "mcs8m.build",
+  "z": "mcs8m.example.tab",
+  "type": "function",
+  "name": "Build request",
+  "func": "// Build request: turns simple commands into MCS-8M frames.\n//   {read:\"program\"} {read:\"preset\"} {read:\"aux\", aux:1}\n//   {read:\"mute\", ch:1..6} {read:\"faders\"}\n//   {aux:1|2, source:1..14}   <- WRITE: changes the Aux output\nconst FID = 0x50;\nfunction frame(pid, tid, msg) {\n    const p = [pid, FID, tid, 0, 0, ...msg];\n    const body = [(p.length >> 8) & 0xff, p.length & 0xff, ...p];      // BC is BIG-endian\n    const cs = (0x100 - (body.reduce((a, b) => a + b, 0) & 0xff)) & 0xff;\n    return Buffer.from([0x01, 0x02, ...body, cs, 0x03]);\n}\nconst video = (eff, cmd, ...a) => frame(0x01, 0x20, [0x03, 2 + a.length, eff, cmd, ...a]);\nconst audio = (cmd, ...d) => frame(0x02, 0x30, [cmd, ...d]);\n\nconst q = msg.payload || {};\nlet out;\nif (q.read === 'program') out = video(0x00, 0x00);\nelse if (q.read === 'preset') out = video(0x00, 0x01);\nelse if (q.read === 'aux' && (q.aux === 1 || q.aux === 2)) out = video(q.aux + 1, 0x00);\nelse if (q.read === 'mute' && q.ch >= 1 && q.ch <= 6) out = audio(0x93, q.ch - 1, 0);\nelse if (q.read === 'faders') out = audio(0x90, 0, 0, 0, 0, 0, 0, 0, 0);\nelse if ((q.aux === 1 || q.aux === 2) && Number.isInteger(q.source) && q.source >= 1 && q.source <= 14)\n    out = video(q.aux + 1, 0x80, 0x00, q.source);                        // WRITE\nif (!out) { node.warn('unknown request: ' + JSON.stringify(q)); return null; }\nmsg.payload = out;\nreturn msg;\n",
+  "outputs": 1,
+  "timeout": 0,
+  "noerr": 0,
+  "initialize": "",
+  "finalize": "",
+  "libs": [],
+  "x": 410,
+  "y": 200,
+  "wires": [
+   [
+    "mcs8m.rate"
+   ]
+  ]
+ },
+ {
+  "id": "mcs8m.rate",
+  "z": "mcs8m.example.tab",
+  "type": "delay",
+  "name": "1 request / 1.2 s",
+  "pauseType": "rate",
+  "timeout": "5",
+  "timeoutUnits": "seconds",
+  "rate": "1",
+  "nbRateUnits": "1.2",
+  "rateUnits": "second",
+  "randomFirst": "1",
+  "randomLast": "5",
+  "randomUnits": "seconds",
+  "drop": false,
+  "allowrate": false,
+  "outputs": 1,
+  "x": 610,
+  "y": 200,
+  "wires": [
+   [
+    "mcs8m.out"
+   ]
+  ]
+ },
+ {
+  "id": "mcs8m.out",
+  "z": "mcs8m.example.tab",
+  "type": "serial out",
+  "name": "to switcher",
+  "serial": "mcs8m.port",
+  "x": 810,
+  "y": 200,
+  "wires": []
+ },
+ {
+  "id": "mcs8m.in",
+  "z": "mcs8m.example.tab",
+  "type": "serial in",
+  "name": "from switcher",
+  "serial": "mcs8m.port",
+  "x": 170,
+  "y": 420,
+  "wires": [
+   [
+    "mcs8m.parse"
+   ]
+  ]
+ },
+ {
+  "id": "mcs8m.parse",
+  "z": "mcs8m.example.tab",
+  "type": "function",
+  "name": "Parse MCS-8M frames",
+  "func": "// Parse MCS-8M frames. The serial-in node may deliver frames in pieces, or\n// several at once, so we buffer and cut frames by BC - never by 0x03.\nlet buf = context.get('buf') || Buffer.alloc(0);\nbuf = Buffer.concat([buf, msg.payload]);\nconst out = [];\nwhile (buf.length) {\n    if (buf[0] !== 0x01) { buf = buf.subarray(1); continue; }       // ACK (04) or noise\n    if (buf.length < 4) break;\n    const bc = (buf[2] << 8) | buf[3];\n    if (buf[1] !== 0x02 || bc < 5 || bc > 512) { buf = buf.subarray(1); continue; }\n    if (buf.length < bc + 6) break;                                    // wait for the rest\n    const f = buf.subarray(0, bc + 6);\n    let sum = 0; for (let i = 2; i < f.length - 1; i++) sum += f[i];\n    if (f[f.length - 1] !== 0x03 || (sum & 0xff) !== 0) { buf = buf.subarray(1); continue; }\n    buf = buf.subarray(bc + 6);\n\n    const m = f.subarray(9, f.length - 2);\n    const r = { raw: Buffer.from(f).toString('hex') };\n    if (f[4] === 0x01) {                                              // video\n        Object.assign(r, { kind: 'video', eff: m[2], cmd: m[3] & 0x7f, data: [...m.subarray(4)] });\n        const sec = { 0: 'me', 2: 'aux1', 3: 'aux2' }[r.eff];\n        if (sec && r.cmd === 0x00) { r.topic = sec === 'me' ? 'program' : sec; r.value = r.data[1]; }\n        else if (sec === 'me' && r.cmd === 0x01) { r.topic = 'preset'; r.value = r.data[1]; }\n        else if (r.eff === 0x20 && r.cmd === 0x37) { r.topic = 'transition'; r.value = r.data[2] === 1; }\n    } else {                                                          // audio\n        Object.assign(r, { kind: 'audio', cmd: m[0] & 0x7f, data: [...m.subarray(1)] });\n        if (r.cmd === 0x13) { r.topic = 'mute.ch' + (r.data[0] + 1); r.value = r.data[1] === 1; }  // 1 = muted\n        else if (r.cmd === 0x10) { r.topic = 'faders'; r.value = r.data; }\n    }\n    out.push({ topic: r.topic || 'other', payload: r });\n}\ncontext.set('buf', buf.length > 1024 ? Buffer.alloc(0) : buf);\nconst last = out.filter(o => o.topic !== 'other').pop();\nif (last) node.status({ text: `${new Date().toLocaleTimeString()} ${last.topic} = ${JSON.stringify(last.payload.value)}` });\nreturn out.length ? [out] : null;\n",
+  "outputs": 1,
+  "timeout": 0,
+  "noerr": 0,
+  "initialize": "",
+  "finalize": "",
+  "libs": [],
+  "x": 410,
+  "y": 420,
+  "wires": [
+   [
+    "mcs8m.debug"
+   ]
+  ]
+ },
+ {
+  "id": "mcs8m.debug",
+  "z": "mcs8m.example.tab",
+  "type": "debug",
+  "name": "switcher says",
+  "active": true,
+  "tosidebar": true,
+  "console": false,
+  "tostatus": false,
+  "complete": "true",
+  "targetType": "full",
+  "statusVal": "",
+  "statusType": "auto",
+  "x": 640,
+  "y": 420,
+  "wires": []
+ }
+]

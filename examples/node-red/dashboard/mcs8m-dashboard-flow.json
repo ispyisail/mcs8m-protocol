@@ -1,0 +1,1194 @@
+[
+ {
+  "id": "mcs8m.dash.tab",
+  "type": "tab",
+  "label": "MCS-8M Dashboard",
+  "disabled": false,
+  "info": "Tablet/phone dashboard for a Sony MCS-8M: route sources to Aux 1 and Aux 2,\nsee what's selected (including changes made on the switcher's panel),\nconnection status, and a read-only DOWNLOAD ALL SETTINGS button.\n\nSetup: double-click **EDIT SETTINGS HERE**. See examples/node-red/dashboard/README.md in\nhttps://github.com/ispyisail/mcs8m-protocol"
+ },
+ {
+  "id": "mcs8m.dash.port",
+  "type": "serial-port",
+  "name": "MCS-8M serial port",
+  "serialport": "/dev/ttyUSB0",
+  "serialbaud": "38400",
+  "databits": "8",
+  "parity": "none",
+  "stopbits": "1",
+  "waitfor": "",
+  "dtr": "none",
+  "rts": "none",
+  "cts": "none",
+  "dsr": "none",
+  "newline": "0x03",
+  "bin": "bin",
+  "out": "char",
+  "addchar": "false",
+  "responsetimeout": ""
+ },
+ {
+  "id": "mcs8m.dash.uitab",
+  "type": "ui_tab",
+  "name": "MCS-8M",
+  "icon": "dashboard",
+  "disabled": false,
+  "hidden": false
+ },
+ {
+  "id": "mcs8m.dash.g1",
+  "type": "ui_group",
+  "name": "Aux 1",
+  "tab": "mcs8m.dash.uitab",
+  "order": 1,
+  "disp": true,
+  "width": "6",
+  "collapse": false,
+  "className": ""
+ },
+ {
+  "id": "mcs8m.dash.g2",
+  "type": "ui_group",
+  "name": "Aux 2",
+  "tab": "mcs8m.dash.uitab",
+  "order": 2,
+  "disp": true,
+  "width": "6",
+  "collapse": false,
+  "className": ""
+ },
+ {
+  "id": "mcs8m.dash.gc",
+  "type": "ui_group",
+  "name": "Connection",
+  "tab": "mcs8m.dash.uitab",
+  "order": 3,
+  "disp": true,
+  "width": "6",
+  "collapse": false,
+  "className": ""
+ },
+ {
+  "id": "mcs8m.dash.note",
+  "type": "comment",
+  "z": "mcs8m.dash.tab",
+  "name": "START HERE: double-click 'EDIT SETTINGS HERE' (names, buttons, repo folder)",
+  "info": "1. EDIT SETTINGS HERE - input names, which source each button selects, repo folder, port for the settings download.\n2. Double-click the 'MCS-8M serial port' config (on any serial node) and set your port.\n3. Button labels: double-click each button to rename it to match.",
+  "x": 260,
+  "y": 40,
+  "wires": []
+ },
+ {
+  "id": "mcs8m.dash.init",
+  "type": "inject",
+  "z": "mcs8m.dash.tab",
+  "name": "Load settings",
+  "props": [],
+  "repeat": "",
+  "crontab": "",
+  "once": true,
+  "onceDelay": 0.1,
+  "topic": "",
+  "x": 130,
+  "y": 100,
+  "wires": [
+   [
+    "mcs8m.dash.settings"
+   ]
+  ]
+ },
+ {
+  "id": "mcs8m.dash.settings",
+  "type": "change",
+  "z": "mcs8m.dash.tab",
+  "name": "EDIT SETTINGS HERE",
+  "rules": [
+   {
+    "t": "set",
+    "p": "source_names",
+    "pt": "flow",
+    "tot": "json",
+    "to": "{\"1\": \"Input 1\", \"2\": \"Input 2\", \"3\": \"Input 3\", \"4\": \"Input 4\", \"5\": \"Input 5\", \"6\": \"Input 6\", \"7\": \"Input 7\", \"8\": \"Input 8\", \"9\": \"Input 9\", \"10\": \"Input 10\", \"11\": \"Input 11\", \"12\": \"Input 12\", \"13\": \"Input 13\", \"14\": \"Input 14\"}"
+   },
+   {
+    "t": "set",
+    "p": "buttons",
+    "pt": "flow",
+    "tot": "json",
+    "to": "[1,2,3,4]"
+   },
+   {
+    "t": "set",
+    "p": "repo_dir",
+    "pt": "flow",
+    "tot": "str",
+    "to": "~/mcs8m-protocol"
+   },
+   {
+    "t": "set",
+    "p": "dump_port",
+    "pt": "flow",
+    "tot": "str",
+    "to": "/dev/ttyUSB0"
+   }
+  ],
+  "action": "",
+  "property": "",
+  "from": "",
+  "to": "",
+  "reg": false,
+  "x": 330,
+  "y": 100,
+  "wires": [
+   []
+  ],
+  "info": "source_names: name shown for each switcher input (1-14) in the 'Active' line.\nbuttons: the source number each of the 4 buttons selects, top to bottom - keep it in step with the button payloads.\nrepo_dir: where you cloned mcs8m-protocol (for DOWNLOAD ALL SETTINGS).\ndump_port: the serial port, same as the serial config node."
+ },
+ {
+  "id": "mcs8m.dash.a1led1",
+  "type": "ui_led",
+  "z": "mcs8m.dash.tab",
+  "order": 1,
+  "group": "mcs8m.dash.g1",
+  "width": "1",
+  "height": "1",
+  "label": "",
+  "labelPlacement": "left",
+  "labelAlignment": "left",
+  "colorForValue": [
+   {
+    "color": "#808080",
+    "value": "false",
+    "valueType": "bool"
+   },
+   {
+    "color": "#4CAF50",
+    "value": "true",
+    "valueType": "bool"
+   }
+  ],
+  "allowColorForValueInMessage": false,
+  "shape": "circle",
+  "showGlow": true,
+  "name": "",
+  "x": 1150,
+  "y": 160,
+  "wires": []
+ },
+ {
+  "id": "mcs8m.dash.a1btn1",
+  "type": "ui_button",
+  "z": "mcs8m.dash.tab",
+  "name": "",
+  "group": "mcs8m.dash.g1",
+  "order": 2,
+  "width": "5",
+  "height": "1",
+  "passthru": false,
+  "label": "INPUT 1",
+  "tooltip": "",
+  "color": "",
+  "bgcolor": "",
+  "className": "",
+  "icon": "videocam",
+  "payload": "{\"aux\": 1, \"source\": 1}",
+  "payloadType": "json",
+  "topic": "",
+  "topicType": "str",
+  "x": 170,
+  "y": 160,
+  "wires": [
+   [
+    "mcs8m.dash.queue",
+    "mcs8m.dash.activity"
+   ]
+  ]
+ },
+ {
+  "id": "mcs8m.dash.a1led2",
+  "type": "ui_led",
+  "z": "mcs8m.dash.tab",
+  "order": 3,
+  "group": "mcs8m.dash.g1",
+  "width": "1",
+  "height": "1",
+  "label": "",
+  "labelPlacement": "left",
+  "labelAlignment": "left",
+  "colorForValue": [
+   {
+    "color": "#808080",
+    "value": "false",
+    "valueType": "bool"
+   },
+   {
+    "color": "#4CAF50",
+    "value": "true",
+    "valueType": "bool"
+   }
+  ],
+  "allowColorForValueInMessage": false,
+  "shape": "circle",
+  "showGlow": true,
+  "name": "",
+  "x": 1150,
+  "y": 200,
+  "wires": []
+ },
+ {
+  "id": "mcs8m.dash.a1btn2",
+  "type": "ui_button",
+  "z": "mcs8m.dash.tab",
+  "name": "",
+  "group": "mcs8m.dash.g1",
+  "order": 4,
+  "width": "5",
+  "height": "1",
+  "passthru": false,
+  "label": "INPUT 2",
+  "tooltip": "",
+  "color": "",
+  "bgcolor": "",
+  "className": "",
+  "icon": "videocam",
+  "payload": "{\"aux\": 1, \"source\": 2}",
+  "payloadType": "json",
+  "topic": "",
+  "topicType": "str",
+  "x": 170,
+  "y": 200,
+  "wires": [
+   [
+    "mcs8m.dash.queue",
+    "mcs8m.dash.activity"
+   ]
+  ]
+ },
+ {
+  "id": "mcs8m.dash.a1led3",
+  "type": "ui_led",
+  "z": "mcs8m.dash.tab",
+  "order": 5,
+  "group": "mcs8m.dash.g1",
+  "width": "1",
+  "height": "1",
+  "label": "",
+  "labelPlacement": "left",
+  "labelAlignment": "left",
+  "colorForValue": [
+   {
+    "color": "#808080",
+    "value": "false",
+    "valueType": "bool"
+   },
+   {
+    "color": "#4CAF50",
+    "value": "true",
+    "valueType": "bool"
+   }
+  ],
+  "allowColorForValueInMessage": false,
+  "shape": "circle",
+  "showGlow": true,
+  "name": "",
+  "x": 1150,
+  "y": 240,
+  "wires": []
+ },
+ {
+  "id": "mcs8m.dash.a1btn3",
+  "type": "ui_button",
+  "z": "mcs8m.dash.tab",
+  "name": "",
+  "group": "mcs8m.dash.g1",
+  "order": 6,
+  "width": "5",
+  "height": "1",
+  "passthru": false,
+  "label": "INPUT 3",
+  "tooltip": "",
+  "color": "",
+  "bgcolor": "",
+  "className": "",
+  "icon": "videocam",
+  "payload": "{\"aux\": 1, \"source\": 3}",
+  "payloadType": "json",
+  "topic": "",
+  "topicType": "str",
+  "x": 170,
+  "y": 240,
+  "wires": [
+   [
+    "mcs8m.dash.queue",
+    "mcs8m.dash.activity"
+   ]
+  ]
+ },
+ {
+  "id": "mcs8m.dash.a1led4",
+  "type": "ui_led",
+  "z": "mcs8m.dash.tab",
+  "order": 7,
+  "group": "mcs8m.dash.g1",
+  "width": "1",
+  "height": "1",
+  "label": "",
+  "labelPlacement": "left",
+  "labelAlignment": "left",
+  "colorForValue": [
+   {
+    "color": "#808080",
+    "value": "false",
+    "valueType": "bool"
+   },
+   {
+    "color": "#4CAF50",
+    "value": "true",
+    "valueType": "bool"
+   }
+  ],
+  "allowColorForValueInMessage": false,
+  "shape": "circle",
+  "showGlow": true,
+  "name": "",
+  "x": 1150,
+  "y": 280,
+  "wires": []
+ },
+ {
+  "id": "mcs8m.dash.a1btn4",
+  "type": "ui_button",
+  "z": "mcs8m.dash.tab",
+  "name": "",
+  "group": "mcs8m.dash.g1",
+  "order": 8,
+  "width": "5",
+  "height": "1",
+  "passthru": false,
+  "label": "INPUT 4",
+  "tooltip": "",
+  "color": "",
+  "bgcolor": "",
+  "className": "",
+  "icon": "videocam",
+  "payload": "{\"aux\": 1, \"source\": 4}",
+  "payloadType": "json",
+  "topic": "",
+  "topicType": "str",
+  "x": 170,
+  "y": 280,
+  "wires": [
+   [
+    "mcs8m.dash.queue",
+    "mcs8m.dash.activity"
+   ]
+  ]
+ },
+ {
+  "id": "mcs8m.dash.a1active",
+  "type": "ui_text",
+  "z": "mcs8m.dash.tab",
+  "group": "mcs8m.dash.g1",
+  "order": 9,
+  "width": "6",
+  "height": "1",
+  "name": "",
+  "label": "Active:",
+  "format": "{{msg.payload}}",
+  "layout": "row-spread",
+  "className": "",
+  "x": 1150,
+  "y": 320,
+  "wires": []
+ },
+ {
+  "id": "mcs8m.dash.a2led1",
+  "type": "ui_led",
+  "z": "mcs8m.dash.tab",
+  "order": 1,
+  "group": "mcs8m.dash.g2",
+  "width": "1",
+  "height": "1",
+  "label": "",
+  "labelPlacement": "left",
+  "labelAlignment": "left",
+  "colorForValue": [
+   {
+    "color": "#808080",
+    "value": "false",
+    "valueType": "bool"
+   },
+   {
+    "color": "#4CAF50",
+    "value": "true",
+    "valueType": "bool"
+   }
+  ],
+  "allowColorForValueInMessage": false,
+  "shape": "circle",
+  "showGlow": true,
+  "name": "",
+  "x": 1150,
+  "y": 360,
+  "wires": []
+ },
+ {
+  "id": "mcs8m.dash.a2btn1",
+  "type": "ui_button",
+  "z": "mcs8m.dash.tab",
+  "name": "",
+  "group": "mcs8m.dash.g2",
+  "order": 2,
+  "width": "5",
+  "height": "1",
+  "passthru": false,
+  "label": "INPUT 1",
+  "tooltip": "",
+  "color": "",
+  "bgcolor": "",
+  "className": "",
+  "icon": "videocam",
+  "payload": "{\"aux\": 2, \"source\": 1}",
+  "payloadType": "json",
+  "topic": "",
+  "topicType": "str",
+  "x": 170,
+  "y": 360,
+  "wires": [
+   [
+    "mcs8m.dash.queue",
+    "mcs8m.dash.activity"
+   ]
+  ]
+ },
+ {
+  "id": "mcs8m.dash.a2led2",
+  "type": "ui_led",
+  "z": "mcs8m.dash.tab",
+  "order": 3,
+  "group": "mcs8m.dash.g2",
+  "width": "1",
+  "height": "1",
+  "label": "",
+  "labelPlacement": "left",
+  "labelAlignment": "left",
+  "colorForValue": [
+   {
+    "color": "#808080",
+    "value": "false",
+    "valueType": "bool"
+   },
+   {
+    "color": "#4CAF50",
+    "value": "true",
+    "valueType": "bool"
+   }
+  ],
+  "allowColorForValueInMessage": false,
+  "shape": "circle",
+  "showGlow": true,
+  "name": "",
+  "x": 1150,
+  "y": 400,
+  "wires": []
+ },
+ {
+  "id": "mcs8m.dash.a2btn2",
+  "type": "ui_button",
+  "z": "mcs8m.dash.tab",
+  "name": "",
+  "group": "mcs8m.dash.g2",
+  "order": 4,
+  "width": "5",
+  "height": "1",
+  "passthru": false,
+  "label": "INPUT 2",
+  "tooltip": "",
+  "color": "",
+  "bgcolor": "",
+  "className": "",
+  "icon": "videocam",
+  "payload": "{\"aux\": 2, \"source\": 2}",
+  "payloadType": "json",
+  "topic": "",
+  "topicType": "str",
+  "x": 170,
+  "y": 400,
+  "wires": [
+   [
+    "mcs8m.dash.queue",
+    "mcs8m.dash.activity"
+   ]
+  ]
+ },
+ {
+  "id": "mcs8m.dash.a2led3",
+  "type": "ui_led",
+  "z": "mcs8m.dash.tab",
+  "order": 5,
+  "group": "mcs8m.dash.g2",
+  "width": "1",
+  "height": "1",
+  "label": "",
+  "labelPlacement": "left",
+  "labelAlignment": "left",
+  "colorForValue": [
+   {
+    "color": "#808080",
+    "value": "false",
+    "valueType": "bool"
+   },
+   {
+    "color": "#4CAF50",
+    "value": "true",
+    "valueType": "bool"
+   }
+  ],
+  "allowColorForValueInMessage": false,
+  "shape": "circle",
+  "showGlow": true,
+  "name": "",
+  "x": 1150,
+  "y": 440,
+  "wires": []
+ },
+ {
+  "id": "mcs8m.dash.a2btn3",
+  "type": "ui_button",
+  "z": "mcs8m.dash.tab",
+  "name": "",
+  "group": "mcs8m.dash.g2",
+  "order": 6,
+  "width": "5",
+  "height": "1",
+  "passthru": false,
+  "label": "INPUT 3",
+  "tooltip": "",
+  "color": "",
+  "bgcolor": "",
+  "className": "",
+  "icon": "videocam",
+  "payload": "{\"aux\": 2, \"source\": 3}",
+  "payloadType": "json",
+  "topic": "",
+  "topicType": "str",
+  "x": 170,
+  "y": 440,
+  "wires": [
+   [
+    "mcs8m.dash.queue",
+    "mcs8m.dash.activity"
+   ]
+  ]
+ },
+ {
+  "id": "mcs8m.dash.a2led4",
+  "type": "ui_led",
+  "z": "mcs8m.dash.tab",
+  "order": 7,
+  "group": "mcs8m.dash.g2",
+  "width": "1",
+  "height": "1",
+  "label": "",
+  "labelPlacement": "left",
+  "labelAlignment": "left",
+  "colorForValue": [
+   {
+    "color": "#808080",
+    "value": "false",
+    "valueType": "bool"
+   },
+   {
+    "color": "#4CAF50",
+    "value": "true",
+    "valueType": "bool"
+   }
+  ],
+  "allowColorForValueInMessage": false,
+  "shape": "circle",
+  "showGlow": true,
+  "name": "",
+  "x": 1150,
+  "y": 480,
+  "wires": []
+ },
+ {
+  "id": "mcs8m.dash.a2btn4",
+  "type": "ui_button",
+  "z": "mcs8m.dash.tab",
+  "name": "",
+  "group": "mcs8m.dash.g2",
+  "order": 8,
+  "width": "5",
+  "height": "1",
+  "passthru": false,
+  "label": "INPUT 4",
+  "tooltip": "",
+  "color": "",
+  "bgcolor": "",
+  "className": "",
+  "icon": "videocam",
+  "payload": "{\"aux\": 2, \"source\": 4}",
+  "payloadType": "json",
+  "topic": "",
+  "topicType": "str",
+  "x": 170,
+  "y": 480,
+  "wires": [
+   [
+    "mcs8m.dash.queue",
+    "mcs8m.dash.activity"
+   ]
+  ]
+ },
+ {
+  "id": "mcs8m.dash.a2active",
+  "type": "ui_text",
+  "z": "mcs8m.dash.tab",
+  "group": "mcs8m.dash.g2",
+  "order": 9,
+  "width": "6",
+  "height": "1",
+  "name": "",
+  "label": "Active:",
+  "format": "{{msg.payload}}",
+  "layout": "row-spread",
+  "className": "",
+  "x": 1150,
+  "y": 520,
+  "wires": []
+ },
+ {
+  "id": "mcs8m.dash.activity",
+  "type": "change",
+  "z": "mcs8m.dash.tab",
+  "name": "Record Activity",
+  "rules": [
+   {
+    "t": "set",
+    "p": "last_command_time",
+    "pt": "flow",
+    "to": "",
+    "tot": "date"
+   }
+  ],
+  "action": "",
+  "property": "",
+  "from": "",
+  "to": "",
+  "reg": false,
+  "x": 420,
+  "y": 600,
+  "wires": [
+   []
+  ]
+ },
+ {
+  "id": "mcs8m.dash.polltimer",
+  "type": "inject",
+  "z": "mcs8m.dash.tab",
+  "name": "Poll Timer",
+  "props": [],
+  "repeat": "5",
+  "crontab": "",
+  "once": true,
+  "onceDelay": "5",
+  "topic": "",
+  "x": 130,
+  "y": 660,
+  "wires": [
+   [
+    "mcs8m.dash.smartpoll"
+   ]
+  ]
+ },
+ {
+  "id": "mcs8m.dash.smartpoll",
+  "type": "function",
+  "z": "mcs8m.dash.tab",
+  "name": "Smart Poll (Pause on Activity)",
+  "func": "if (flow.get('dump_active')) return null; // settings download owns the serial port\nconst lastCmd = flow.get('last_command_time') || 0;\nconst now = Date.now();\nif (now - lastCmd < 2000) return null;\nflow.set('last_poll_time', now);\nreturn [\n    {payload: {aux: 1, type: 'poll'}},\n    {payload: {aux: 2, type: 'poll'}}\n];",
+  "outputs": 2,
+  "timeout": 0,
+  "noerr": 0,
+  "initialize": "",
+  "finalize": "",
+  "libs": [],
+  "x": 340,
+  "y": 660,
+  "wires": [
+   [
+    "mcs8m.dash.queue"
+   ],
+   [
+    "mcs8m.dash.queue"
+   ]
+  ]
+ },
+ {
+  "id": "mcs8m.dash.queue",
+  "type": "delay",
+  "z": "mcs8m.dash.tab",
+  "name": "Queue (50ms)",
+  "pauseType": "rate",
+  "timeout": "5",
+  "timeoutUnits": "seconds",
+  "rate": "1",
+  "nbRateUnits": "0.05",
+  "rateUnits": "second",
+  "randomFirst": "1",
+  "randomLast": "5",
+  "randomUnits": "seconds",
+  "drop": false,
+  "allowrate": false,
+  "outputs": 1,
+  "x": 560,
+  "y": 560,
+  "wires": [
+   [
+    "mcs8m.dash.builder"
+   ]
+  ]
+ },
+ {
+  "id": "mcs8m.dash.builder",
+  "type": "function",
+  "z": "mcs8m.dash.tab",
+  "name": "Command Builder",
+  "func": "if (flow.get('dump_active')) { node.warn('Settings download in progress - command ignored'); return null; }\n\nfunction calculateChecksum(buffer, startIdx, endIdx) {\n    let sum = 0;\n    for (let i = startIdx; i <= endIdx; i++) sum += buffer[i];\n    return (0x100 - (sum & 0xFF)) & 0xFF;\n}\n\nfunction buildReadCommand(aux) {\n    const effMap = { 1: 0x02, 2: 0x03 };\n    const cmd = Buffer.from([\n        0x01, 0x02, 0x00, 0x09, 0x01, 0x50, 0x20, 0x00, 0x00, 0x03, 0x02, effMap[aux], 0x00, 0x00, 0x03\n    ]);\n    cmd[13] = calculateChecksum(cmd, 2, 12);\n    return cmd;\n}\n\nfunction buildWriteCommand(aux, source) {\n    const effMap = { 1: 0x02, 2: 0x03 };\n    const cmd = Buffer.from([\n        0x01, 0x02, 0x00, 0x0B, 0x01, 0x50, 0x20, 0x00, 0x00, 0x03, 0x04, effMap[aux], 0x80, 0x00, source, 0x00, 0x03\n    ]);\n    cmd[15] = calculateChecksum(cmd, 2, 14);\n    return cmd;\n}\n\nif (!msg.payload || typeof msg.payload !== 'object') return null;\nconst { aux, source, type } = msg.payload;\n\nif (type === 'poll') {\n    if (![1, 2].includes(aux)) return null;\n    return { payload: buildReadCommand(aux) };\n}\n\nif (![1, 2].includes(aux) || !(Number.isInteger(source) && source >= 1 && source <= 14)) return null;\nreturn { payload: buildWriteCommand(aux, source) };",
+  "outputs": 1,
+  "timeout": 0,
+  "noerr": 0,
+  "initialize": "",
+  "finalize": "",
+  "libs": [],
+  "x": 760,
+  "y": 560,
+  "wires": [
+   [
+    "mcs8m.dash.toswitcher"
+   ]
+  ]
+ },
+ {
+  "id": "mcs8m.dash.toswitcher",
+  "type": "serial out",
+  "z": "mcs8m.dash.tab",
+  "name": "To Switcher",
+  "serial": "mcs8m.dash.port",
+  "x": 960,
+  "y": 560,
+  "wires": []
+ },
+ {
+  "id": "mcs8m.dash.fromswitcher",
+  "type": "serial in",
+  "z": "mcs8m.dash.tab",
+  "name": "From Switcher",
+  "serial": "mcs8m.dash.port",
+  "x": 140,
+  "y": 760,
+  "wires": [
+   [
+    "mcs8m.dash.parser"
+   ]
+  ]
+ },
+ {
+  "id": "mcs8m.dash.parser",
+  "type": "function",
+  "z": "mcs8m.dash.tab",
+  "name": "Response Parser",
+  "func": "// Sony MCS-8M response parser.\n// Frames are found by their byte count (BC, big-endian) - never by 0x03, which\n// also appears inside frames. Handles poll replies, button replies, and status\n// frames the switcher sends ON ITS OWN when something changes on the panel,\n// so the dashboard updates immediately instead of at the next poll.\nlet buf = context.get('buf') || Buffer.alloc(0);\nif (Buffer.isBuffer(msg.payload)) buf = Buffer.concat([buf, msg.payload]);\nelse if (typeof msg.payload === 'string') buf = Buffer.concat([buf, Buffer.from(msg.payload, 'binary')]);\n\nconst now = Date.now();\nflow.set('last_response_time', now);\n\nconst AUX = { 0x02: 1, 0x03: 2 };       // EFF byte -> Aux number\nconst out = [];\n\nwhile (buf.length > 0) {\n    if (buf[0] === 0x04) { buf = buf.slice(1); continue; }          // audio ACK\n    const delIdx = buf.indexOf(0x01);\n    if (delIdx === -1) { buf = Buffer.alloc(0); break; }\n    if (delIdx > 0) buf = buf.slice(delIdx);\n    if (buf.length < 4) break;\n    if (buf[1] !== 0x02) { buf = buf.slice(1); continue; }\n    const len = (buf[2] << 8) | buf[3];\n    if (len < 5 || len > 512) { buf = buf.slice(1); continue; }     // implausible -> resync\n    const total = len + 6;\n    if (buf.length < total) break;                                  // wait for the rest\n    const frame = buf.slice(0, total);\n    let sum = 0;\n    for (let i = 2; i < total - 1; i++) sum += frame[i];\n    if (frame[total - 1] !== 0x03 || (sum & 0xFF) !== 0) { buf = buf.slice(1); continue; }\n    buf = buf.slice(total);\n\n    // video frame: [PID=01 ... ] msg = [03, count, EFF, CMD, byte3, byte4]\n    const m = frame.slice(9, -2);\n    if (frame[4] !== 0x01 || m.length < 6 || m[0] !== 0x03) continue;\n    const aux = AUX[m[2]];\n    // Only the Aux A-bus (CMD 0x80) is what's actually on the projector.\n    // B-bus (0x81) is preset and must NOT drive the LEDs.\n    if (!aux || m[3] !== 0x80) continue;\n    const source = m[5];\n\n    const sincePoll = now - (flow.get('last_poll_time') || 0);\n    const sinceCmd = now - (flow.get('last_command_time') || 0);\n    const origin = sinceCmd < 2500 ? 'button reply' : sincePoll < 2500 ? 'poll reply' : 'panel change';\n    if (origin === 'panel change') flow.set('push_count', (flow.get('push_count') || 0) + 1);\n\n    out.push({ payload: { aux, source, origin } });\n    const t = new Date().toLocaleTimeString();\n    node.status({ fill: origin === 'panel change' ? 'blue' : 'green', shape: 'dot',\n                  text: `${t} Aux${aux}=${source} (${origin}) | panel pushes: ${flow.get('push_count') || 0}` });\n}\ncontext.set('buf', buf);\nif (out.length) node.send([out]);\nreturn null;",
+  "outputs": 1,
+  "timeout": 0,
+  "noerr": 0,
+  "initialize": "",
+  "finalize": "",
+  "libs": [],
+  "x": 360,
+  "y": 760,
+  "wires": [
+   [
+    "mcs8m.dash.leds"
+   ]
+  ]
+ },
+ {
+  "id": "mcs8m.dash.leds",
+  "type": "function",
+  "z": "mcs8m.dash.tab",
+  "name": "LED & Status Controller",
+  "func": "// Lights the LED next to whichever button matches each Aux output's source,\n// and shows the source name. Outputs: Aux1 LEDs 1-4, Aux2 LEDs 1-4, Aux1 name, Aux2 name.\nif (!msg.payload || !msg.payload.aux || !msg.payload.source) return null;\nflow.set(`aux${msg.payload.aux}_source`, msg.payload.source);\nconst src = { 1: flow.get('aux1_source') || 0, 2: flow.get('aux2_source') || 0 };\nconst buttons = flow.get('buttons') || [1, 2, 3, 4];          // set in EDIT SETTINGS HERE\nconst names = flow.get('source_names') || {};\nconst name = s => s ? (names[s] || `Input ${s}`) : '-';\nconst out = [];\nfor (const aux of [1, 2]) for (let i = 0; i < 4; i++) out.push({ payload: src[aux] === buttons[i] });\nout.push({ payload: name(src[1]) }, { payload: name(src[2]) });\nreturn out;",
+  "outputs": 10,
+  "timeout": 0,
+  "noerr": 0,
+  "initialize": "",
+  "finalize": "",
+  "libs": [],
+  "x": 640,
+  "y": 760,
+  "wires": [
+   [
+    "mcs8m.dash.a1led1"
+   ],
+   [
+    "mcs8m.dash.a1led2"
+   ],
+   [
+    "mcs8m.dash.a1led3"
+   ],
+   [
+    "mcs8m.dash.a1led4"
+   ],
+   [
+    "mcs8m.dash.a2led1"
+   ],
+   [
+    "mcs8m.dash.a2led2"
+   ],
+   [
+    "mcs8m.dash.a2led3"
+   ],
+   [
+    "mcs8m.dash.a2led4"
+   ],
+   [
+    "mcs8m.dash.a1active"
+   ],
+   [
+    "mcs8m.dash.a2active"
+   ]
+  ]
+ },
+ {
+  "id": "mcs8m.dash.health",
+  "type": "inject",
+  "z": "mcs8m.dash.tab",
+  "name": "Check Health",
+  "props": [],
+  "repeat": "2",
+  "crontab": "",
+  "once": true,
+  "onceDelay": 0.1,
+  "topic": "",
+  "x": 130,
+  "y": 860,
+  "wires": [
+   [
+    "mcs8m.dash.watchdog"
+   ]
+  ]
+ },
+ {
+  "id": "mcs8m.dash.watchdog",
+  "type": "function",
+  "z": "mcs8m.dash.tab",
+  "name": "Watchdog Logic",
+  "func": "const lastResponse = flow.get('last_response_time') || 0;\nconst now = Date.now();\nif (now - lastResponse > 5000) {\n    return { payload: \"OFFLINE\", color: \"red\" };\n} else {\n    return { payload: \"ONLINE\", color: \"green\" };\n}",
+  "outputs": 1,
+  "timeout": 0,
+  "noerr": 0,
+  "initialize": "",
+  "finalize": "",
+  "libs": [],
+  "x": 330,
+  "y": 860,
+  "wires": [
+   [
+    "mcs8m.dash.status"
+   ]
+  ]
+ },
+ {
+  "id": "mcs8m.dash.status",
+  "type": "ui_text",
+  "z": "mcs8m.dash.tab",
+  "group": "mcs8m.dash.gc",
+  "order": 1,
+  "width": "6",
+  "height": "1",
+  "name": "",
+  "label": "Switcher Status:",
+  "format": "<font color=\"{{msg.color}}\"><b>{{msg.payload}}</b></font>",
+  "layout": "row-spread",
+  "className": "",
+  "x": 560,
+  "y": 860,
+  "wires": []
+ },
+ {
+  "id": "mcs8m.dash.qr",
+  "type": "ui_template",
+  "z": "mcs8m.dash.tab",
+  "group": "mcs8m.dash.gc",
+  "name": "Dashboard QR code",
+  "order": 2,
+  "width": "6",
+  "height": "6",
+  "format": "<div style=\"display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;\">\n    <canvas id=\"qr-code\"></canvas>\n    <div style=\"margin-top:15px;font-weight:bold;\">Scan to control</div>\n    <div id=\"qr-url\" style=\"font-size:0.8em;color:gray;\"></div>\n</div>\n<script src=\"https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js\"></script>\n<script>\n    (function(scope) {\n        setTimeout(function() {\n            // whatever address this dashboard was opened with, e.g. http://192.168.1.20:1880/ui\n            var url = window.location.origin + window.location.pathname.replace(/\\/$/, '');\n            document.getElementById('qr-url').textContent = url;\n            try {\n                new QRious({ element: document.getElementById('qr-code'), value: url, size: 200, level: 'H' });\n            } catch (e) {\n                document.getElementById('qr-code').outerHTML = '<p>QR library not available (offline?)</p>';\n            }\n        }, 500);\n    })(scope);\n</script>",
+  "storeOutMessages": true,
+  "fwdInMessages": true,
+  "resendOnRefresh": true,
+  "templateScope": "local",
+  "x": 150,
+  "y": 920,
+  "wires": [
+   []
+  ]
+ },
+ {
+  "id": "mcs8m.dash.dlnote",
+  "type": "comment",
+  "z": "mcs8m.dash.tab",
+  "name": "DOWNLOAD ALL SETTINGS: frees the port, runs tools/mcs8m_dump.py (read-only), reclaims the port",
+  "info": "Releases the serial port, runs tools/mcs8m_dump.py, then reclaims the port.\nPolling and buttons are paused while it runs (flow.dump_active).\nThe script only sends READ requests. Needs Python 3 and the repo at repo_dir (EDIT SETTINGS HERE).",
+  "x": 330,
+  "y": 980,
+  "wires": []
+ },
+ {
+  "id": "mcs8m.dash.dlbutton",
+  "type": "ui_button",
+  "z": "mcs8m.dash.tab",
+  "name": "DOWNLOAD ALL SETTINGS",
+  "group": "mcs8m.dash.gc",
+  "order": 3,
+  "width": "6",
+  "height": "1",
+  "passthru": false,
+  "label": "DOWNLOAD ALL SETTINGS",
+  "tooltip": "Read every setting from the MCS-8M and save it as JSON",
+  "color": "",
+  "bgcolor": "",
+  "className": "",
+  "icon": "file_download",
+  "payload": "dump",
+  "payloadType": "str",
+  "topic": "dump",
+  "topicType": "str",
+  "x": 170,
+  "y": 1040,
+  "wires": [
+   [
+    "mcs8m.dash.dlstart"
+   ]
+  ]
+ },
+ {
+  "id": "mcs8m.dash.dlstart",
+  "type": "function",
+  "z": "mcs8m.dash.tab",
+  "name": "Start Settings Download",
+  "func": "// Guard against double-clicks; a stale flag (>5 min) is ignored in case a run died.\nconst started = flow.get('dump_started') || 0;\nif (flow.get('dump_active') && Date.now() - started < 5 * 60 * 1000) {\n    return [null, { payload: 'Download already running...' }];\n}\nflow.set('dump_active', true);\nflow.set('dump_started', Date.now());\n// Close Node-RED's hold on the serial port so the Python script can use it.\nreturn [{ payload: { enabled: false } }, { payload: 'Releasing serial port...' }];",
+  "outputs": 2,
+  "timeout": 0,
+  "noerr": 0,
+  "initialize": "",
+  "finalize": "",
+  "libs": [],
+  "x": 400,
+  "y": 1040,
+  "wires": [
+   [
+    "mcs8m.dash.portctl"
+   ],
+   [
+    "mcs8m.dash.dlstatus"
+   ]
+  ]
+ },
+ {
+  "id": "mcs8m.dash.portctl",
+  "type": "serial control",
+  "z": "mcs8m.dash.tab",
+  "name": "Release / Reclaim Port",
+  "serial": "mcs8m.dash.port",
+  "x": 640,
+  "y": 1040,
+  "wires": [
+   [
+    "mcs8m.dash.released"
+   ]
+  ]
+ },
+ {
+  "id": "mcs8m.dash.released",
+  "type": "switch",
+  "z": "mcs8m.dash.tab",
+  "name": "Port released?",
+  "property": "payload.enabled",
+  "propertyType": "msg",
+  "rules": [
+   {
+    "t": "false"
+   }
+  ],
+  "checkall": "true",
+  "repair": false,
+  "outputs": 1,
+  "x": 850,
+  "y": 1040,
+  "wires": [
+   [
+    "mcs8m.dash.wait"
+   ]
+  ]
+ },
+ {
+  "id": "mcs8m.dash.wait",
+  "type": "delay",
+  "z": "mcs8m.dash.tab",
+  "name": "Wait 1.5s",
+  "pauseType": "delay",
+  "timeout": "1500",
+  "timeoutUnits": "milliseconds",
+  "rate": "1",
+  "nbRateUnits": "1",
+  "rateUnits": "second",
+  "randomFirst": "1",
+  "randomLast": "5",
+  "randomUnits": "seconds",
+  "drop": false,
+  "allowrate": false,
+  "outputs": 1,
+  "x": 170,
+  "y": 1100,
+  "wires": [
+   [
+    "mcs8m.dash.dlargs"
+   ]
+  ]
+ },
+ {
+  "id": "mcs8m.dash.dlargs",
+  "type": "function",
+  "z": "mcs8m.dash.tab",
+  "name": "Build dump command",
+  "func": "// Builds the arguments for tools/mcs8m_dump.py from EDIT SETTINGS HERE.\n// Dumps are saved in <repo_dir>/dumps/ (ignored by git).\nconst home = p => String(p).replace(/^~(?=\\/|$)/, '$HOME');       // let the shell expand ~\nconst q = s => '\"' + String(s).replace(/[\"\\\\`]/g, '') + '\"';       // keep paths quoted\nconst repo = home(flow.get('repo_dir') || '~/mcs8m-protocol').replace(/\\/+$/, '');\nconst port = flow.get('dump_port') || '/dev/ttyUSB0';\nconst t = new Date(), p = v => String(v).padStart(2, '0');\nconst ts = `${t.getFullYear()}-${p(t.getMonth() + 1)}-${p(t.getDate())}-${p(t.getHours())}-${p(t.getMinutes())}-${p(t.getSeconds())}`;\nmsg.payload = `${q(repo + '/tools/mcs8m_dump.py')} -p ${q(port)} -o ${q(repo + '/dumps/mcs8m_settings_' + ts + '.json')}`;\nreturn [msg, { payload: 'Reading switcher settings...' }];",
+  "outputs": 2,
+  "timeout": 0,
+  "noerr": 0,
+  "initialize": "",
+  "finalize": "",
+  "libs": [],
+  "x": 370,
+  "y": 1100,
+  "wires": [
+   [
+    "mcs8m.dash.exec"
+   ],
+   [
+    "mcs8m.dash.dlstatus"
+   ]
+  ]
+ },
+ {
+  "id": "mcs8m.dash.exec",
+  "type": "exec",
+  "z": "mcs8m.dash.tab",
+  "command": "python3 -I",
+  "addpay": "payload",
+  "append": "",
+  "useSpawn": "false",
+  "timer": "240",
+  "winHide": false,
+  "oldrc": false,
+  "name": "mcs8m_dump.py",
+  "x": 600,
+  "y": 1100,
+  "wires": [
+   [
+    "mcs8m.dash.dlfinish"
+   ],
+   [
+    "mcs8m.dash.dllog"
+   ],
+   [
+    "mcs8m.dash.dlfinish"
+   ]
+  ]
+ },
+ {
+  "id": "mcs8m.dash.dlfinish",
+  "type": "function",
+  "z": "mcs8m.dash.tab",
+  "name": "Finish Settings Download",
+  "func": "// Receives exec stdout (string, arrives first) and then the return-code object.\nif (typeof msg.payload === 'string' || Buffer.isBuffer(msg.payload)) {\n    context.set('stdout', String(msg.payload));\n    return null;\n}\nconst out = context.get('stdout') || '';\ncontext.set('stdout', '');\nflow.set('dump_active', false);\n\nlet r = null;\ntry { r = JSON.parse(out.trim().split('\\n').pop()); } catch (e) { }\nconst rc = msg.payload || {};\nlet text;\nif (r && r.decoded > 0) {\n    text = `Saved ${r.decoded}/${r.requests} settings -> ${r.output}`;\n} else if (r && r.aborted) {\n    text = 'Switcher did not answer - check cable and \"Serial Cmd Group = Rem 1\"';\n} else {\n    text = `Download failed (exit ${rc.code}${rc.signal ? ', ' + rc.signal : ''}${rc.message ? ': ' + rc.message : ''})`;\n}\n// 1: reclaim serial port, 2: status text, 3: toast\nreturn [{ payload: { enabled: true } }, { payload: text }, { payload: text, topic: 'MCS-8M settings download' }];",
+  "outputs": 3,
+  "timeout": 0,
+  "noerr": 0,
+  "initialize": "",
+  "finalize": "",
+  "libs": [],
+  "x": 820,
+  "y": 1100,
+  "wires": [
+   [
+    "mcs8m.dash.portctl"
+   ],
+   [
+    "mcs8m.dash.dlstatus"
+   ],
+   [
+    "mcs8m.dash.toast"
+   ]
+  ]
+ },
+ {
+  "id": "mcs8m.dash.dlstatus",
+  "type": "ui_text",
+  "z": "mcs8m.dash.tab",
+  "group": "mcs8m.dash.gc",
+  "order": 4,
+  "width": "6",
+  "height": "2",
+  "name": "Download Status",
+  "label": "Settings download:",
+  "format": "{{msg.payload}}",
+  "layout": "col-center",
+  "className": "",
+  "style": false,
+  "font": "",
+  "fontSize": "",
+  "color": "#000000",
+  "x": 1080,
+  "y": 1040,
+  "wires": []
+ },
+ {
+  "id": "mcs8m.dash.toast",
+  "type": "ui_toast",
+  "z": "mcs8m.dash.tab",
+  "position": "top right",
+  "displayTime": "6",
+  "highlight": "",
+  "sendall": true,
+  "outputs": 0,
+  "ok": "OK",
+  "cancel": "",
+  "raw": false,
+  "className": "",
+  "topic": "",
+  "name": "Download Result",
+  "x": 1070,
+  "y": 1100,
+  "wires": []
+ },
+ {
+  "id": "mcs8m.dash.dllog",
+  "type": "debug",
+  "z": "mcs8m.dash.tab",
+  "name": "Dump log (stderr)",
+  "active": true,
+  "tosidebar": true,
+  "console": false,
+  "tostatus": false,
+  "complete": "payload",
+  "targetType": "msg",
+  "statusVal": "",
+  "statusType": "auto",
+  "x": 830,
+  "y": 1160,
+  "wires": []
+ }
+]

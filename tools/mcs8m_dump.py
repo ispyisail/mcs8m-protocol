@@ -370,6 +370,7 @@ def run(args):
                       "slowest_reply_ms": max((r["ms"] for r in out["raw"].values() if r["rx"]), default=None),
                       "unmatched_replies_discarded": stale, "unsolicited_frames": len(out["unsolicited"]), "stray_acks": parser.acks, "junk_bytes": parser.junk.hex(" ")}
     path = args.output or datetime.now().strftime("mcs8m_dump_%Y%m%d_%H%M%S.json")  # local time
+    os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
     with open(path, "w") as fh:
         json.dump(out, fh, indent=2)
     print(f"\n{ok}/{len(P)} settings decoded -> {path}", file=sys.stderr)

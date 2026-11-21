@@ -1,6 +1,9 @@
 __pycache__/
 *.pyc
-# dumps and probe results contain your own switcher state
-*.json
-!tools/values.json
 *.pdf
+# dumps and probe results contain your own switcher's state
+dumps/
+mcs8m_settings_*.json
+mcs8m_dump_*.json
+mcs8m_probe.json
+settings.json

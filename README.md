@@ -31,6 +31,8 @@ Preset  (next):   7
 
 Ready-to-use code in **Python, Node.js and Node-RED** is in [examples/](examples/).
 
+Just want a projector control panel? Import the **[Node-RED dashboard](examples/node-red/dashboard/)**: source buttons for Aux 1 and Aux 2 on any phone or tablet.
+
 ## Contents
 
 | Document | What's in it |
