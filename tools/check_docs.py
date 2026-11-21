@@ -4,11 +4,12 @@ Run from anywhere: python3 tools/check_docs.py  (exit code 1 on any bad frame)."
 import glob, os, re, sys
 
 root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+PACKED = re.compile(r"\b0102[0-9A-Fa-f]{10,}03\b")     # no-space form used for Bitfocus Companion
 FRAME = re.compile(r"\b01 02 (?:\|\s*)?(?:[0-9A-Fa-f]{2}(?:\s*\|\s*|\s)){4,}[0-9A-Fa-f]{2}\b")
 bad = total = 0
 for path in sorted(glob.glob(os.path.join(root, "docs", "*.md")) + [os.path.join(root, "README.md")]):
     for n, line in enumerate(open(path, encoding="utf-8"), 1):
-        for m in FRAME.finditer(line):
+        for m in list(FRAME.finditer(line)) + list(PACKED.finditer(line)):
             b = bytes.fromhex(m.group(0).replace("|", " "))
             total += 1
             problems = []

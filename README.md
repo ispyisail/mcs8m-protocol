@@ -40,7 +40,7 @@ For real use, match replies to requests and frame them by BC. The switcher also 
 
 - **Projector or Aux control panels for volunteers.** A [ready-made Node-RED dashboard](examples/node-red/dashboard/) is included.
 - **Tally lights**: on-air and preview indicators on ESP32s or phones. The switcher announces program changes and transitions as they happen ([tally example](examples/python/03_tally.py)).
-- **Stream Deck / Bitfocus Companion buttons**: cut, auto-transition or route Aux outputs from a button. There's no Companion module yet; the [protocol docs](docs/) have what one needs.
+- **Stream Deck / Bitfocus Companion buttons**: cut, auto-transition, mute or route Aux outputs from a button, using Companion's built-in generic modules. There's a [step-by-step guide](docs/09-bitfocus-companion.md) with ready-to-paste commands. (There's no dedicated module with tally feedback yet.)
 - **Automation bridges**, from Node-RED, Home Assistant, or show-control software, via a Raspberry Pi or a serial-to-network adapter.
 - **Settings backup and audit**: a read-only [dump of every setting](tools/mcs8m_dump.py) to JSON.
 
@@ -84,6 +84,7 @@ Just want a projector control panel? Import the **[Node-RED dashboard](examples/
 | [06 Examples](docs/06-examples.md) | Real captured frames, annotated byte by byte |
 | [07 Hardware](docs/07-hardware.md) | Enabling Rem 1, the REMOTE pinout, null-modem cables, adapters (RS-232 vs TTL), cable length, loopback test |
 | [08 Raspberry Pi setup](docs/08-pi-setup.md) | Blank SD card to working controller in ~30 min, securing the editor, backing up your setup, rebuilding after a failure |
+| [09 Bitfocus Companion](docs/09-bitfocus-companion.md) | Stream Deck buttons through Companion's Generic TCP Serial and TCP/UDP modules, a ser2net bridge, ready-to-paste hex commands |
 
 ## Confidence labels
 
@@ -106,6 +107,7 @@ Tested on: MCS-8M, main application version 1.01 or later, RS-232 at 38400 8N1 t
 | [`tools/mcs8m_probe.py`](tools/mcs8m_probe.py) | Searches for undocumented read commands. **Read-only**, can be resumed, and stops if anything unexpected happens. |
 | [`tools/values.json`](tools/values.json) | Code-to-value tables (fader dB, EQ frequencies, pan…), made by `tools/gen_values.py` |
 | [`tools/install-pi.sh`](tools/install-pi.sh) | One-command Raspberry Pi setup: Node-RED, add-ons, serial permissions, this repo; `--dashboard` or `--restore` |
+| [`tools/companion_commands.py`](tools/companion_commands.py) | Ready-to-paste hex commands for Bitfocus Companion (Aux, program, preset, AUTO TRANS, FTB, mute, snapshot recall) |
 | [`tools/loopback_test.py`](tools/loopback_test.py) | Checks your adapter and cable without the switcher (pins 2–3 joined) |
 | [`tools/simulator.py`](tools/simulator.py) | A fake MCS-8M on a virtual serial port, for development without hardware |
 | [`tools/check_docs.py`](tools/check_docs.py) | Checks the byte count and checksum of every frame quoted in these docs |
