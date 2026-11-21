@@ -109,6 +109,7 @@ Tested on: MCS-8M, main application version 1.01 or later, RS-232 at 38400 8N1 t
 | [`tools/mcs8m_probe.py`](tools/mcs8m_probe.py) | Searches for undocumented read commands. **Read-only**, can be resumed, and stops if anything unexpected happens. |
 | [`tools/values.json`](tools/values.json) | Code-to-value tables (fader dB, EQ frequencies, pan…), made by `tools/gen_values.py` |
 | [`tools/install-pi.sh`](tools/install-pi.sh) | One-command Raspberry Pi setup: Node-RED, add-ons, serial permissions, this repo; `--dashboard` or `--restore` |
+| [`bridge/`](bridge/) | **Network bridge** (stage 1): owns the serial port, shares live state and commands over HTTP, loop guard; vMix and OBS connectors coming |
 | [`tools/check_commands.py`](tools/check_commands.py) | Validates `commands.json` against the tested tools |
 | [`tools/companion_commands.py`](tools/companion_commands.py) | Ready-to-paste hex commands for Bitfocus Companion (Aux, program, preset, AUTO TRANS, FTB, mute, snapshot recall) |
 | [`tools/loopback_test.py`](tools/loopback_test.py) | Checks your adapter and cable without the switcher (pins 2–3 joined) |

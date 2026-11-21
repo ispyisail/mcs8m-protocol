@@ -7,3 +7,5 @@ mcs8m_settings_*.json
 mcs8m_dump_*.json
 mcs8m_probe.json
 settings.json
+# your bridge settings (may contain a token / passwords)
+bridge/config.json

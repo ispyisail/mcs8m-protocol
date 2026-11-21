@@ -1,0 +1,23 @@
+{
+  "_help": "Copy to config.json and edit. Keys starting with _ are comments. See bridge/README.md.",
+
+  "serial_port": "/dev/ttyUSB0",
+  "_serial_port": "Linux: /dev/ttyUSB0 or better /dev/serial/by-id/...; Windows: COM3. Nothing else may use this port.",
+
+  "http": { "host": "0.0.0.0", "port": 8765, "token": "" },
+  "_http": "token: if set, every POST must send 'Authorization: Bearer <token>' or ?token=<token>.",
+
+  "poll_seconds": 10,
+  "_poll_seconds": "Safety-net poll. Program changes and transitions arrive instantly from the switcher anyway.",
+
+  "inputs": {
+    "1": "Camera 1", "2": "Camera 2", "3": "Camera 3", "4": "Camera 4",
+    "5": "Input 5", "6": "Input 6", "7": "Input 7", "8": "Input 8"
+  },
+
+  "loop_protection": {
+    "switcher_input_from_vmix": null,
+    "vmix_input_from_switcher": null
+  },
+  "_loop_protection": "switcher_input_from_vmix: the MCS-8M input (1-14) that carries vMix's output back. vmix_input_from_switcher: the vMix input (number) fed by the capture card with the MCS-8M program. When both are set, the bridge refuses any change that would show each in the other (a video loop), and warns if one happens anyway."
+}
