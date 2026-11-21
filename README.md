@@ -2,11 +2,47 @@
 
 An independent, tested description of the serial control protocol of the **Sony MCS-8M multi-format compact switcher**.
 
-It fixes the errors in Sony's protocol manual, documents behaviour the manual leaves out, and lists commands the manual doesn't mention that were found by careful read-only probing. It also includes small read-only tools in plain Python with no extra libraries.
+It fixes the errors in Sony's protocol manual, documents behaviour the manual leaves out, and lists commands the manual doesn't mention that were found by careful read-only probing. It also includes tested tools and examples in Python, Node.js and Node-RED, for Linux, macOS, Raspberry Pi and Windows.
 
 > **Unofficial.** Not affiliated with, endorsed by, or supported by Sony. "Sony" and "MCS-8M" are trademarks of Sony Corporation.
 > This document is written from scratch from testing on a real unit. It does not reproduce Sony's manual. For the official command definitions, see Sony's *MCS-8M Protocol Manual* (1st edition, 2011).
 > Use at your own risk. Sending write commands changes what's on air.
+
+## Quick reference
+
+| | Sony MCS-8M RS-232C control |
+|---|---|
+| Port | **REMOTE**, 9-pin D-sub, rear panel. [Pinout](docs/07-hardware.md#the-remote-connector-) |
+| Cable | **Null-modem** (crossed). Only TxD, RxD and GND are used |
+| Serial settings | **38400 baud, 8N1**, no flow control |
+| Switcher setting | **Serial Cmd Group = Rem 1**, saved with Startup Define (off from the factory) |
+| Data | **Binary** frames: no ASCII, no line endings |
+| Frame | `01 02` · BC (2 bytes, **big-endian**) · PID · `50` · TID · `00 00` · MSG… · CS · `03` |
+| Checksum | all bytes from BC through CS add up to `00` (low 8 bits) |
+| Video | PID `01`, TID `20`, MSG = `03 count EFF CMD args…`; **read = high bit clear**, write = set |
+| Audio | PID `02`, TID `30`, MSG = `CMD data…`; **read = high bit set**, write = clear |
+| Timing | video replies after **~1.01 s**, audio after ~11 ms; unknown commands get no reply |
+| Parsing | split frames by **BC**, never by `03`, which also appears inside frames |
+
+**Try it.** This asks what's on air (program) and prints the source button number:
+
+```python
+import serial                                         # pip install pyserial
+s = serial.Serial("/dev/ttyUSB0", 38400, timeout=2)   # "COM3" on Windows; 8N1 is the default
+s.write(bytes.fromhex("01 02 00 09 01 50 20 00 00 03 02 00 00 81 03"))   # read program (M/E A-bus)
+reply = s.read(17)                                    # video replies take ~1 s
+print("on air: button", reply[14])
+```
+
+For real use, match replies to requests and frame them by BC. The switcher also sends frames on its own. The [Python library](examples/python/mcs8m.py) handles all of that.
+
+## What you can build
+
+- **Projector or Aux control panels for volunteers.** A [ready-made Node-RED dashboard](examples/node-red/dashboard/) is included.
+- **Tally lights**: on-air and preview indicators on ESP32s or phones. The switcher announces program changes and transitions as they happen ([tally example](examples/python/03_tally.py)).
+- **Stream Deck / Bitfocus Companion buttons**: cut, auto-transition or route Aux outputs from a button. There's no Companion module yet; the [protocol docs](docs/) have what one needs.
+- **Automation bridges**, from Node-RED, Home Assistant, or show-control software, via a Raspberry Pi or a serial-to-network adapter.
+- **Settings backup and audit**: a read-only [dump of every setting](tools/mcs8m_dump.py) to JSON.
 
 ## The two things that stop it working
 
@@ -74,7 +110,7 @@ Tested on: MCS-8M, main application version 1.01 or later, RS-232 at 38400 8N1 t
 | [`tools/simulator.py`](tools/simulator.py) | A fake MCS-8M on a virtual serial port, for development without hardware |
 | [`tools/check_docs.py`](tools/check_docs.py) | Checks the byte count and checksum of every frame quoted in these docs |
 
-The two serial tools need Python 3 on Linux or macOS and nothing else (they use `termios`, not pyserial). Both refuse to send any command code the protocol treats as a write.
+The serial tools need Python 3. On Linux, macOS and Raspberry Pi there's nothing else to install. On **Windows**, run `py -m pip install pyserial` first, and use port names like `COM3`. The dump and probe tools refuse to send any command code the protocol treats as a write. (`simulator.py` needs Linux or macOS.)
 
 ```sh
 python3 tools/mcs8m_dump.py --selftest          # check the frame builder against known frames
@@ -93,5 +129,7 @@ Please open an issue with:
 
 ## Licence
 
-- Documentation (`docs/`, this README): [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
-- Code (`tools/`): MIT. See [LICENSE](LICENSE).
+- **Code** (`tools/`, `examples/`): MIT. See [LICENSE](LICENSE).
+- **Documentation** (`docs/`, the READMEs): [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). See [LICENSE-docs](LICENSE-docs).
+
+You can use both freely, including commercially, e.g. in a Bitfocus Companion module. Just credit this repo.

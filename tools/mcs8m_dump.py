@@ -6,11 +6,12 @@ and write it to JSON for analysis.
 READ-ONLY: this script only ever sends status/READ requests. A guard refuses
 to send anything that the protocol would treat as a WRITE.
 
-Requirements: Python 3 standard library only (no pyserial). Linux/macOS.
+Requirements: Python 3. Linux/macOS: standard library only. Windows: pip install pyserial.
 
 Usage:
   python3 mcs8m_dump.py                          # /dev/ttyUSB0 -> mcs8m_dump_<time>.json
   python3 mcs8m_dump.py -p /dev/ttyUSB1 -o out.json
+  py mcs8m_dump.py -p COM3 -o out.json            # Windows (needs: py -m pip install pyserial)
   python3 mcs8m_dump.py --dry-run                # print the frames, don't open the port
   python3 mcs8m_dump.py --selftest               # check frame builder against manual examples
 
@@ -109,7 +110,8 @@ def frame_msg(f):
     return f[4], f[5], f[6], f[9:-2]
 
 # ---------------------------------------------------------------- serial (stdlib)
-class Port:
+class _PosixPort:
+    """Linux/macOS: standard library only (termios)."""
     def __init__(self, path, baud=38400):
         import termios
         self.fd = os.open(path, os.O_RDWR | os.O_NOCTTY | os.O_NONBLOCK)
@@ -130,6 +132,35 @@ class Port:
         return os.read(self.fd, 4096) if r else b""
     def close(self):
         os.close(self.fd)
+
+class _PySerialPort:
+    """Windows (or anywhere with: pip install pyserial). Port names like COM3."""
+    def __init__(self, path, baud=38400):
+        try:
+            import serial
+        except ImportError:
+            sys.exit("This needs pyserial on Windows:  py -m pip install pyserial")
+        self.s = serial.Serial(path, baud, bytesize=8, parity="N", stopbits=1, timeout=0,
+                               xonxoff=False, rtscts=False, dsrdtr=False)
+        self.s.reset_input_buffer()
+    def write(self, b):
+        self.s.write(b)
+    def read(self, timeout):
+        self.s.timeout = max(0.0, timeout)
+        first = self.s.read(1)                       # wait up to `timeout` for the first byte
+        if not first:
+            return b""
+        n = self.s.in_waiting
+        return first + (self.s.read(n) if n else b"")
+    def close(self):
+        self.s.close()
+
+def Port(path, baud=38400):
+    """Open the serial port: termios on Linux/macOS, pyserial on Windows.
+    Set MCS8M_SERIAL=pyserial to force pyserial anywhere."""
+    if os.name == "nt" or os.environ.get("MCS8M_SERIAL") == "pyserial":
+        return _PySerialPort(path, baud)
+    return _PosixPort(path, baud)
 
 # ---------------------------------------------------------------- value tables
 FADER_DB = ("-inf -77.1 -76.2 -75.4 -74.5 -73.7 -72.8 -72.0 -71.1 -70.2 -69.4 -68.5 -67.7 -66.8 -66.0 -65.1 -64.2 -63.4 -62.5 -61.7 -60.8 -60.0 -59.2 -58.4 -57.6 -56.8 -56.0 -55.2 -54.4 -53.6 -52.8 -52.0 -51.2 -50.4 -49.6 -48.8 -48.0 -47.2 -46.4 -45.6 -44.8 -44.0 -43.2 -42.4 -41.6 -40.8 -40.0 -39.6 -39.2 -38.8 -38.4 -38.0 -37.6 -37.3 -36.9 -36.5 -36.1 -35.7 -35.3 -35.0 -34.2 -34.2 -33.8 -33.4 -33.0 -32.6 -32.3 -31.9 -31.5 -31.1 -30.7 -30.3 -30.0 -29.6 -29.3 -29.0 -28.6 -28.3 -28.0 -27.6 -27.3 -27.0 -26.6 -26.3 -26.0 -25.6 -25.3 -25.0 -24.6 -24.3 -24.0 -23.6 -23.3 -23.0 -22.6 -22.3 -22.0 -21.6 -21.3 -21.0 -20.6 -20.3 -20.0 -19.6 -19.3 -19.0 -18.7 -18.3 -18.0 -17.7 -17.4 -17.0 -16.7 -16.4 -16.1 -15.8 -15.4 -15.1 -14.8 -14.5 -14.1 -13.8 -13.5 -13.2 -12.9 -12.5 -12.2 -11.9 -11.6 -11.2 -10.9 -10.6 -10.3 -10.0 -9.8 -9.6 -9.5 -9.3 -9.1 -9.0 -8.8 -8.7 -8.5 -8.3 -8.2 -8.0 -7.9 -7.7 -7.5 -7.4 -7.2 -7.0 -6.9 -6.7 -6.6 -6.4 -6.2 -6.1 -5.9 -5.8 -5.6 -5.4 -5.3 -5.1 -5.0 -4.8 -4.6 -4.5 -4.3 -4.1 -4.0 -3.8 -3.6 -3.5 -3.3 -3.1 -3.0 -2.8 -2.6 -2.5 -2.3 -2.1 -2.0 -1.8 -1.6 -1.5 -1.3 -1.1 -1.0 -0.8 -0.6 -0.5 -0.3 -0.1 0 0.1 0.3 0.4 0.6 0.8 0.9 1.1 1.2 1.4 1.6 1.7 1.9 2.0 2.2 2.4 2.5 2.7 2.9 3.0 3.2 3.3 3.5 3.7 3.8 4.0 4.1 4.3 4.5 4.6 4.8 5.0 5.1 5.3 5.5 5.6 5.8 6.0 6.1 6.3 6.5 6.6 6.8 7.0 7.1 7.3 7.5 7.6 7.8 8.0 8.1 8.3 8.5 8.6 8.8 9.0 9.1 9.3 9.5 9.6 9.8 10.0").split()

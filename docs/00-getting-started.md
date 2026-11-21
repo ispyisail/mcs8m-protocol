@@ -7,7 +7,7 @@ From an unconnected switcher to reading what's on air, in about 15 minutes.
 - A Sony MCS-8M
 - A computer with a serial port, or a **USB-to-RS-232 adapter** (FTDI- or Prolific-based ones are fine). A Raspberry Pi works well.
 - A **null-modem (crossed) cable** with 9-pin D-sub connectors. A straight-through cable won't work. Check whether you need pins or sockets on each end; see [Hardware](07-hardware.md).
-- Python 3 (built into Linux, macOS and Raspberry Pi OS)
+- Python 3: built into Linux, macOS and Raspberry Pi OS. On **Windows**, install it from [python.org](https://www.python.org/downloads/), then run `py -m pip install pyserial` (see [Windows](#windows)).
 
 No switcher yet? Skip to [Try it without hardware](#try-it-without-hardware).
 
@@ -39,6 +39,8 @@ On Linux, if you get "Permission denied", add yourself to the `dialout` group an
 ```sh
 sudo usermod -aG dialout $USER
 ```
+
+On **Windows**, open Device Manager → **Ports (COM & LPT)**. The adapter shows up as e.g. *USB Serial Port (COM3)*.
 
 Only one program can use the port at a time. **Stop anything else using it, Node-RED for example, before running these tools.**
 
@@ -73,6 +75,20 @@ python3 examples/python/03_tally.py /dev/ttyUSB0            # live on-air displa
 python3 tools/mcs8m_dump.py -p /dev/ttyUSB0 -o settings.json  # every documented setting, ~31 s
 ```
 
+## Windows
+
+All the Python tools and examples work on Windows, except the simulator (and `install-pi.sh`, which is for Raspberry Pi / Linux). Use `py` instead of `python3`, backslashes in paths, and a COM port name:
+
+```bat
+py -m pip install pyserial
+py tools\mcs8m_dump.py --selftest
+py tools\loopback_test.py COM3
+py examples\python\01_read_program.py COM3
+py tools\mcs8m_dump.py -p COM3 -o settings.json
+```
+
+The tools use pyserial automatically on Windows. On Linux and macOS they use the built-in `termios` module, so there's nothing to install.
+
 ## If nothing answers
 
 | Symptom | Check |
@@ -92,7 +108,7 @@ python3 tools/mcs8m_dump.py -p /dev/ttyUSB0 -o settings.json  # every documented
 `tools/simulator.py` pretends to be an MCS-8M on a virtual serial port. It copies the 1-second video delay, ACKs, duplicate replies and panel pushes.
 
 ```sh
-python3 tools/simulator.py             # prints e.g.  Simulator on /dev/pts/5
+python3 tools/simulator.py             # prints e.g.  Simulator on /dev/pts/5   (Linux/macOS only)
 ```
 
 In a second terminal:

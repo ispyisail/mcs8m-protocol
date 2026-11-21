@@ -2,7 +2,7 @@
 
 Each example takes the serial port as an argument, and defaults to `/dev/ttyUSB0`. To try them without a switcher, start `tools/simulator.py` and pass the `/dev/pts/N` path it prints. See [Getting started](../docs/00-getting-started.md).
 
-## Python (no dependencies)
+## Python (no dependencies on Linux/macOS; `pip install pyserial` on Windows)
 
 | File | What it does | Changes the switcher? |
 |---|---|---|

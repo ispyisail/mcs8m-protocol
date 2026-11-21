@@ -1,7 +1,8 @@
 """
 mcs8m.py - a small, dependency-free Python library for the Sony MCS-8M RS-232 protocol.
 
-Python 3.7+, Linux/macOS (uses termios; no pyserial needed).
+Python 3.7+. Linux/macOS: no dependencies (uses termios).
+Windows: py -m pip install pyserial, then use a port name like "COM3".
 
     from mcs8m import MCS8M
     with MCS8M("/dev/ttyUSB0") as sw:
@@ -99,8 +100,8 @@ class Frame:
 
 
 # --------------------------------------------------------------------- serial port
-class SerialPort:
-    """38400 8N1, raw, no flow control - using only the standard library."""
+class _PosixPort:
+    """Linux/macOS: 38400 8N1, raw, no flow control - standard library only."""
 
     def __init__(self, path, baud=38400):
         import termios
@@ -122,6 +123,41 @@ class SerialPort:
 
     def close(self):
         os.close(self.fd)
+
+
+class _PySerialPort:
+    """Windows, or anywhere pyserial is installed (pip install pyserial). Ports like COM3."""
+
+    def __init__(self, path, baud=38400):
+        try:
+            import serial
+        except ImportError:
+            raise SystemExit("On Windows this needs pyserial:  py -m pip install pyserial")
+        self.s = serial.Serial(path, baud, bytesize=8, parity="N", stopbits=1, timeout=0,
+                               xonxoff=False, rtscts=False, dsrdtr=False)
+        self.s.reset_input_buffer()
+
+    def write(self, data):
+        self.s.write(data)
+
+    def read(self, timeout):
+        self.s.timeout = max(0.0, timeout)
+        first = self.s.read(1)                       # wait up to `timeout` for the first byte
+        if not first:
+            return b""
+        n = self.s.in_waiting
+        return first + (self.s.read(n) if n else b"")
+
+    def close(self):
+        self.s.close()
+
+
+def SerialPort(path, baud=38400):
+    """Open a port: termios on Linux/macOS, pyserial on Windows.
+    Set the environment variable MCS8M_SERIAL=pyserial to use pyserial anywhere."""
+    if os.name == "nt" or os.environ.get("MCS8M_SERIAL") == "pyserial":
+        return _PySerialPort(path, baud)
+    return _PosixPort(path, baud)
 
 
 # --------------------------------------------------------------------- switcher
