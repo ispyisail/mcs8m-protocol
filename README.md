@@ -36,6 +36,8 @@ print("on air: button", reply[14])
 
 For real use, match replies to requests and frame them by BC. The switcher also sends frames on its own. The [Python library](examples/python/mcs8m.py) handles all of that.
 
+**Machine-readable spec:** [`commands.json`](commands.json) describes the whole protocol in one file: transport, framing, every command with its argument layout and value tables, the messages the switcher sends on its own, the undocumented commands, errata and verified example frames. Each entry carries a confidence label. It's meant for code generators, Companion module authors and AI tools. `tools/check_commands.py` rebuilds every read request from it alone, and checks them against the tested dump tool.
+
 ## What you can build
 
 - **Projector or Aux control panels for volunteers.** A [ready-made Node-RED dashboard](examples/node-red/dashboard/) is included.
@@ -107,6 +109,7 @@ Tested on: MCS-8M, main application version 1.01 or later, RS-232 at 38400 8N1 t
 | [`tools/mcs8m_probe.py`](tools/mcs8m_probe.py) | Searches for undocumented read commands. **Read-only**, can be resumed, and stops if anything unexpected happens. |
 | [`tools/values.json`](tools/values.json) | Code-to-value tables (fader dB, EQ frequencies, pan…), made by `tools/gen_values.py` |
 | [`tools/install-pi.sh`](tools/install-pi.sh) | One-command Raspberry Pi setup: Node-RED, add-ons, serial permissions, this repo; `--dashboard` or `--restore` |
+| [`tools/check_commands.py`](tools/check_commands.py) | Validates `commands.json` against the tested tools |
 | [`tools/companion_commands.py`](tools/companion_commands.py) | Ready-to-paste hex commands for Bitfocus Companion (Aux, program, preset, AUTO TRANS, FTB, mute, snapshot recall) |
 | [`tools/loopback_test.py`](tools/loopback_test.py) | Checks your adapter and cable without the switcher (pins 2–3 joined) |
 | [`tools/simulator.py`](tools/simulator.py) | A fake MCS-8M on a virtual serial port, for development without hardware |

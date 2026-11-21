@@ -1,0 +1,2679 @@
+{
+ "$comment": "Machine-readable description of the Sony MCS-8M RS-232C serial protocol. Unofficial; see README.md. All byte values are hex strings ('0x80'). Validate with: python3 tools/check_commands.py",
+ "name": "Sony MCS-8M RS-232C protocol",
+ "version": "0.1.0",
+ "license": "CC-BY-4.0",
+ "source": "https://github.com/ispyisail/mcs8m-protocol",
+ "device": {
+  "manufacturer": "Sony",
+  "model": "MCS-8M",
+  "type": "multi-format compact switcher",
+  "firmware_tested": "main application 1.01 or later"
+ },
+ "confidence_levels": {
+  "verified": "tested on a real MCS-8M",
+  "manual": "from Sony's protocol manual, not tested here",
+  "found": "undocumented; observed on a real unit, meaning unknown",
+  "guess": "interpretation, not proven"
+ },
+ "transport": {
+  "interface": "RS-232C",
+  "connector": "REMOTE, 9-pin D-sub, rear panel (DTE pinout: pin 2 RxD in, pin 3 TxD out, pin 5 GND)",
+  "cable": "null-modem (TxD/RxD crossed); only TxD, RxD, GND used",
+  "baud": 38400,
+  "data_bits": 8,
+  "parity": "none",
+  "stop_bits": 1,
+  "flow_control": "none",
+  "enable_on_switcher": "Setup > System > highlight 'Back' > press V3 knob > For Services > Serial Cmd Group = Rem 1, then save and restart with Startup Define. Off from the factory; without it the switcher ignores all frames silently. Never select FACT.",
+  "encoding": "binary frames; no ASCII, no line endings"
+ },
+ "framing": {
+  "layout": [
+   {
+    "field": "DEL",
+    "bytes": 1,
+    "value": "0x01"
+   },
+   {
+    "field": "STX",
+    "bytes": 1,
+    "value": "0x02"
+   },
+   {
+    "field": "BC",
+    "bytes": 2,
+    "endian": "big",
+    "meaning": "number of bytes from PID through the last MSG byte (= 5 + len(MSG))",
+    "erratum": "the manual says little-endian; that is wrong (verified)"
+   },
+   {
+    "field": "PID",
+    "bytes": 1,
+    "values": {
+     "video": "0x01",
+     "audio": "0x02"
+    }
+   },
+   {
+    "field": "FID",
+    "bytes": 1,
+    "value": "0x50",
+    "note": "replies from the switcher also carry 0x50"
+   },
+   {
+    "field": "TID",
+    "bytes": 1,
+    "values": {
+     "video": "0x20",
+     "audio": "0x30"
+    }
+   },
+   {
+    "field": "ARQ",
+    "bytes": 1,
+    "value": "0x00"
+   },
+   {
+    "field": "ART",
+    "bytes": 1,
+    "value": "0x00"
+   },
+   {
+    "field": "MSG",
+    "bytes": "variable",
+    "see": "families"
+   },
+   {
+    "field": "CS",
+    "bytes": 1,
+    "meaning": "checksum"
+   },
+   {
+    "field": "ETX",
+    "bytes": 1,
+    "value": "0x03"
+   }
+  ],
+  "frame_length": "BC + 6",
+  "checksum": {
+   "rule": "sum of all bytes from BC (both bytes) through CS, modulo 256, equals 0",
+   "compute": "CS = (-sum(BC_hi, BC_lo, PID ... last MSG byte)) & 0xFF"
+  },
+  "parsing": [
+   "Find frame boundaries with BC. 0x03 also appears inside frames (PROT, EFF 0x03 = Aux2, data, checksums), so never split on ETX.",
+   "Resync by dropping one byte when BC is implausible (<5 or >512), ETX is missing, or the checksum fails.",
+   "A lone 0x04 outside a frame is an ACK (after audio writes)."
+  ]
+ },
+ "families": {
+  "video": {
+   "pid": "0x01",
+   "tid": "0x20",
+   "msg": [
+    "PROT (always 0x03)",
+    "count (number of bytes that follow: EFF + CMD + args)",
+    "EFF (section)",
+    "CMD",
+    "args..."
+   ],
+   "read": "CMD with the high bit clear (0x00-0x7F)",
+   "write": "CMD with the high bit set (CMD | 0x80)",
+   "answer": "a full frame in the write layout (CMD | 0x80) carrying the current value",
+   "warning": "the read/write bit is the OPPOSITE of the audio family"
+  },
+  "audio": {
+   "pid": "0x02",
+   "tid": "0x30",
+   "msg": [
+    "CMD",
+    "data..."
+   ],
+   "read": "status request: CMD | 0x80, with the same data bytes as a write (the value byte is ignored; send 0x00)",
+   "write": "CMD with the high bit clear",
+   "answer": "reads: a full frame with CMD (high bit clear) and the current data; writes: a lone 0x04 ACK byte",
+   "warning": "the read/write bit is the OPPOSITE of the video family"
+  }
+ },
+ "timing": {
+  "video_reply_ms": [
+   1011,
+   1014
+  ],
+  "audio_reply_ms": [
+   11,
+   12
+  ],
+  "recommended_timeout_ms": 2000,
+  "unknown_command": "no reply at all (no error frame, no NAK)",
+  "duplicates": "the unit sometimes repeats a reply byte-for-byte ~1.5 s later; match replies to requests and ignore exact repeats",
+  "transmit_note": "about 5 ms to transmit one command (manual)"
+ },
+ "sections": {
+  "0x00": "M/E",
+  "0x01": "not used",
+  "0x02": "Aux1",
+  "0x03": "Aux2",
+  "0x20": "undocumented (sends transition-running messages)",
+  "0x21": "E-File (snapshots)"
+ },
+ "video_commands": [
+  {
+   "id": "xpt_a_bus",
+   "name": "Crosspoint select: A-bus",
+   "description": "Source on the A-bus. On the M/E the A-bus is PROGRAM (on air); on Aux1/Aux2 it feeds the output.",
+   "sections": [
+    "0x00",
+    "0x02",
+    "0x03"
+   ],
+   "read": {
+    "cmd": "0x00",
+    "args": []
+   },
+   "write": {
+    "cmd": "0x80",
+    "args": [
+     {
+      "name": "flags",
+      "type": "u8",
+      "write_value": "0x00",
+      "note": "send 0x00. Answers: 0x40 on the M/E A-bus (fixed program-bus marker); 0x80 on some undocumented buses. Ignore when reading."
+     },
+     {
+      "name": "button",
+      "type": "u8",
+      "min": 1,
+      "max": 14,
+      "note": "crosspoint button; 8-14 = SHIFT + 1-7"
+     }
+    ]
+   },
+   "answer": {
+    "cmd": "0x80",
+    "data": [
+     {
+      "name": "flags",
+      "type": "u8",
+      "write_value": "0x00",
+      "note": "send 0x00. Answers: 0x40 on the M/E A-bus (fixed program-bus marker); 0x80 on some undocumented buses. Ignore when reading."
+     },
+     {
+      "name": "button",
+      "type": "u8",
+      "min": 1,
+      "max": 14,
+      "note": "crosspoint button; 8-14 = SHIFT + 1-7"
+     }
+    ],
+    "note": "same layout as the write"
+   },
+   "confidence": {
+    "read": "verified",
+    "write": "verified (Aux1/Aux2); manual (M/E)"
+   },
+   "notes": [
+    "AUTO TRANS swaps sources between the M/E A and B buses, so the A-bus is always on air (verified).",
+    "Writing the M/E A-bus is a hot cut."
+   ]
+  },
+  {
+   "id": "xpt_b_bus",
+   "name": "Crosspoint select: B-bus",
+   "description": "Source on the B-bus. On the M/E the B-bus is PRESET (next).",
+   "sections": [
+    "0x00",
+    "0x02",
+    "0x03"
+   ],
+   "read": {
+    "cmd": "0x01",
+    "args": []
+   },
+   "write": {
+    "cmd": "0x81",
+    "args": [
+     {
+      "name": "flags",
+      "type": "u8",
+      "write_value": "0x00",
+      "note": "send 0x00. Answers: 0x40 on the M/E A-bus (fixed program-bus marker); 0x80 on some undocumented buses. Ignore when reading."
+     },
+     {
+      "name": "button",
+      "type": "u8",
+      "min": 1,
+      "max": 14,
+      "note": "crosspoint button; 8-14 = SHIFT + 1-7"
+     }
+    ]
+   },
+   "answer": {
+    "cmd": "0x81",
+    "data": [
+     {
+      "name": "flags",
+      "type": "u8",
+      "write_value": "0x00",
+      "note": "send 0x00. Answers: 0x40 on the M/E A-bus (fixed program-bus marker); 0x80 on some undocumented buses. Ignore when reading."
+     },
+     {
+      "name": "button",
+      "type": "u8",
+      "min": 1,
+      "max": 14,
+      "note": "crosspoint button; 8-14 = SHIFT + 1-7"
+     }
+    ],
+    "note": "same layout as the write"
+   },
+   "confidence": {
+    "read": "verified",
+    "write": "manual"
+   }
+  },
+  {
+   "id": "xpt_key_fill",
+   "name": "Crosspoint select: key fill",
+   "description": "Key fill source. Normally only key fill is written; write key source too only when Key Source Select = Split.",
+   "sections": [
+    "0x00"
+   ],
+   "read": {
+    "cmd": "0x07",
+    "args": []
+   },
+   "write": {
+    "cmd": "0x87",
+    "args": [
+     {
+      "name": "flags",
+      "type": "u8",
+      "write_value": "0x00",
+      "note": "send 0x00. Answers: 0x40 on the M/E A-bus (fixed program-bus marker); 0x80 on some undocumented buses. Ignore when reading."
+     },
+     {
+      "name": "button",
+      "type": "u8",
+      "min": 1,
+      "max": 14,
+      "note": "crosspoint button; 8-14 = SHIFT + 1-7"
+     }
+    ]
+   },
+   "answer": {
+    "cmd": "0x87",
+    "data": [
+     {
+      "name": "flags",
+      "type": "u8",
+      "write_value": "0x00",
+      "note": "send 0x00. Answers: 0x40 on the M/E A-bus (fixed program-bus marker); 0x80 on some undocumented buses. Ignore when reading."
+     },
+     {
+      "name": "button",
+      "type": "u8",
+      "min": 1,
+      "max": 14,
+      "note": "crosspoint button; 8-14 = SHIFT + 1-7"
+     }
+    ],
+    "note": "same layout as the write"
+   },
+   "confidence": {
+    "read": "verified",
+    "write": "manual"
+   }
+  },
+  {
+   "id": "xpt_key_source",
+   "name": "Crosspoint select: key source",
+   "description": "Key source (only meaningful when Key Source Select = Split).",
+   "sections": [
+    "0x00"
+   ],
+   "read": {
+    "cmd": "0x08",
+    "args": []
+   },
+   "write": {
+    "cmd": "0x88",
+    "args": [
+     {
+      "name": "flags",
+      "type": "u8",
+      "write_value": "0x00",
+      "note": "send 0x00. Answers: 0x40 on the M/E A-bus (fixed program-bus marker); 0x80 on some undocumented buses. Ignore when reading."
+     },
+     {
+      "name": "button",
+      "type": "u8",
+      "min": 1,
+      "max": 14,
+      "note": "crosspoint button; 8-14 = SHIFT + 1-7"
+     }
+    ]
+   },
+   "answer": {
+    "cmd": "0x88",
+    "data": [
+     {
+      "name": "flags",
+      "type": "u8",
+      "write_value": "0x00",
+      "note": "send 0x00. Answers: 0x40 on the M/E A-bus (fixed program-bus marker); 0x80 on some undocumented buses. Ignore when reading."
+     },
+     {
+      "name": "button",
+      "type": "u8",
+      "min": 1,
+      "max": 14,
+      "note": "crosspoint button; 8-14 = SHIFT + 1-7"
+     }
+    ],
+    "note": "same layout as the write"
+   },
+   "confidence": {
+    "read": "verified",
+    "write": "manual"
+   }
+  },
+  {
+   "id": "next_transition",
+   "name": "Next transition",
+   "description": "Which layers the next transition affects.",
+   "sections": [
+    "0x00"
+   ],
+   "read": {
+    "cmd": "0x10",
+    "args": []
+   },
+   "write": {
+    "cmd": "0x90",
+    "args": [
+     {
+      "name": "next",
+      "type": "enum",
+      "enum": "next_transition"
+     }
+    ]
+   },
+   "answer": {
+    "cmd": "0x90",
+    "data": [
+     {
+      "name": "next",
+      "type": "enum",
+      "enum": "next_transition"
+     }
+    ],
+    "note": "same layout as the write"
+   },
+   "confidence": {
+    "read": "verified",
+    "write": "manual"
+   }
+  },
+  {
+   "id": "transition_type",
+   "name": "Transition type",
+   "description": "MIX / WIPE / NAM / CUT / DME WIPE for the effect or key transition.",
+   "sections": [
+    "0x00"
+   ],
+   "read": {
+    "cmd": "0x11",
+    "args": [
+     {
+      "name": "function",
+      "type": "enum",
+      "enum": "transition_function",
+      "allowed": [
+       "0x00",
+       "0x01"
+      ]
+     },
+     {
+      "name": "fixed",
+      "type": "fixed",
+      "value": "0x00"
+     }
+    ]
+   },
+   "write": {
+    "cmd": "0x91",
+    "args": [
+     {
+      "name": "function",
+      "type": "enum",
+      "enum": "transition_function",
+      "allowed": [
+       "0x00",
+       "0x01"
+      ]
+     },
+     {
+      "name": "fixed",
+      "type": "fixed",
+      "value": "0x00"
+     },
+     {
+      "name": "type",
+      "type": "enum",
+      "enum": "transition_type"
+     }
+    ]
+   },
+   "answer": {
+    "cmd": "0x91",
+    "data": [
+     {
+      "name": "function",
+      "type": "enum",
+      "enum": "transition_function",
+      "allowed": [
+       "0x00",
+       "0x01"
+      ]
+     },
+     {
+      "name": "fixed",
+      "type": "fixed",
+      "value": "0x00"
+     },
+     {
+      "name": "type",
+      "type": "enum",
+      "enum": "transition_type"
+     }
+    ],
+    "note": "same layout as the write"
+   },
+   "confidence": {
+    "read": "verified",
+    "write": "manual"
+   },
+   "notes": [
+    "To use WIPE or DME WIPE, set the pattern first (wipe_pattern / dme_wipe_pattern), then the type."
+   ]
+  },
+  {
+   "id": "transition_rate",
+   "name": "Transition rate",
+   "description": "Rate used by panel and GPI transitions (a serial AUTO TRANSITION carries its own rate).",
+   "sections": [
+    "0x00",
+    "0x02",
+    "0x03"
+   ],
+   "read": {
+    "cmd": "0x18",
+    "args": [
+     {
+      "name": "function",
+      "type": "enum",
+      "enum": "transition_function",
+      "allowed_by_section": {
+       "0x00": [
+        "0x00",
+        "0x01",
+        "0x06"
+       ],
+       "0x02": [
+        "0x00"
+       ],
+       "0x03": [
+        "0x00"
+       ]
+      }
+     },
+     {
+      "name": "property",
+      "type": "fixed",
+      "value": "0x00"
+     }
+    ]
+   },
+   "write": {
+    "cmd": "0x98",
+    "args": [
+     {
+      "name": "function",
+      "type": "enum",
+      "enum": "transition_function"
+     },
+     {
+      "name": "property",
+      "type": "fixed",
+      "value": "0x00"
+     },
+     {
+      "name": "rate",
+      "type": "bcd3",
+      "bytes": 2,
+      "min": 0,
+      "max": 999,
+      "unit": "frames",
+      "note": "byte 1 low nibble = hundreds; byte 2 = tens (high nibble), ones (low nibble). 30 frames = 0x00 0x30"
+     }
+    ]
+   },
+   "answer": {
+    "cmd": "0x98",
+    "data": [
+     {
+      "name": "function",
+      "type": "enum",
+      "enum": "transition_function"
+     },
+     {
+      "name": "property",
+      "type": "fixed",
+      "value": "0x00"
+     },
+     {
+      "name": "rate",
+      "type": "bcd3",
+      "bytes": 2,
+      "min": 0,
+      "max": 999,
+      "unit": "frames",
+      "note": "byte 1 low nibble = hundreds; byte 2 = tens (high nibble), ones (low nibble). 30 frames = 0x00 0x30"
+     }
+    ],
+    "note": "same layout as the write"
+   },
+   "confidence": {
+    "read": "verified",
+    "write": "manual"
+   }
+  },
+  {
+   "id": "auto_transition",
+   "name": "Auto transition start",
+   "sections": [
+    "0x00",
+    "0x02",
+    "0x03"
+   ],
+   "description": "Runs a transition at the given rate. Rate 0 = cut. Ignores the stored transition rate.",
+   "read": null,
+   "write": {
+    "cmd": "0x96",
+    "args": [
+     {
+      "name": "function",
+      "type": "enum",
+      "enum": "transition_function"
+     },
+     {
+      "name": "rate",
+      "type": "bcd3",
+      "bytes": 2,
+      "min": 0,
+      "max": 999,
+      "unit": "frames",
+      "note": "byte 1 low nibble = hundreds; byte 2 = tens (high nibble), ones (low nibble). 30 frames = 0x00 0x30"
+     }
+    ]
+   },
+   "answer": null,
+   "confidence": {
+    "read": null,
+    "write": "manual (frame matches the manual's example)"
+   },
+   "notes": [
+    "Write only. Starting a transition produces unsolicited EFF 0x20 CMD 0xB7 messages (see unsolicited)."
+   ]
+  },
+  {
+   "id": "wipe_pattern",
+   "name": "Wipe pattern",
+   "description": "Wipe pattern for the effect transition.",
+   "sections": [
+    "0x00"
+   ],
+   "read": {
+    "cmd": "0x1B",
+    "args": [
+     {
+      "name": "sub_address",
+      "type": "fixed",
+      "value": "0x00"
+     }
+    ]
+   },
+   "write": {
+    "cmd": "0x9B",
+    "args": [
+     {
+      "name": "sub_address",
+      "type": "fixed",
+      "value": "0x00"
+     },
+     {
+      "name": "pattern",
+      "type": "bcd4",
+      "bytes": 2,
+      "min": 0,
+      "max": 9999,
+      "note": "4 BCD digits, e.g. 1201 = 0x12 0x01"
+     }
+    ]
+   },
+   "answer": {
+    "cmd": "0x9B",
+    "data": [
+     {
+      "name": "sub_address",
+      "type": "fixed",
+      "value": "0x00"
+     },
+     {
+      "name": "pattern",
+      "type": "bcd4",
+      "bytes": 2,
+      "min": 0,
+      "max": 9999,
+      "note": "4 BCD digits, e.g. 1201 = 0x12 0x01"
+     }
+    ],
+    "note": "same layout as the write"
+   },
+   "confidence": {
+    "read": "verified",
+    "write": "manual"
+   }
+  },
+  {
+   "id": "wipe_direction",
+   "name": "Wipe direction",
+   "description": "Wipe direction for the effect transition.",
+   "sections": [
+    "0x00"
+   ],
+   "read": {
+    "cmd": "0x1B",
+    "args": [
+     {
+      "name": "sub_address",
+      "type": "fixed",
+      "value": "0x04"
+     }
+    ]
+   },
+   "write": {
+    "cmd": "0x9B",
+    "args": [
+     {
+      "name": "sub_address",
+      "type": "fixed",
+      "value": "0x04"
+     },
+     {
+      "name": "direction",
+      "type": "enum",
+      "enum": "wipe_direction_flags"
+     }
+    ]
+   },
+   "answer": {
+    "cmd": "0x9B",
+    "data": [
+     {
+      "name": "sub_address",
+      "type": "fixed",
+      "value": "0x04"
+     },
+     {
+      "name": "direction",
+      "type": "enum",
+      "enum": "wipe_direction_flags"
+     }
+    ],
+    "note": "same layout as the write"
+   },
+   "confidence": {
+    "read": "verified",
+    "write": "manual"
+   }
+  },
+  {
+   "id": "dme_wipe_pattern",
+   "name": "DME wipe pattern",
+   "description": "DME wipe pattern for the effect transition.",
+   "sections": [
+    "0x00"
+   ],
+   "read": {
+    "cmd": "0x1C",
+    "args": [
+     {
+      "name": "sub_address",
+      "type": "fixed",
+      "value": "0x00"
+     }
+    ]
+   },
+   "write": {
+    "cmd": "0x9C",
+    "args": [
+     {
+      "name": "sub_address",
+      "type": "fixed",
+      "value": "0x00"
+     },
+     {
+      "name": "pattern",
+      "type": "bcd4",
+      "bytes": 2,
+      "min": 0,
+      "max": 9999,
+      "note": "4 BCD digits, e.g. 1201 = 0x12 0x01"
+     }
+    ]
+   },
+   "answer": {
+    "cmd": "0x9C",
+    "data": [
+     {
+      "name": "sub_address",
+      "type": "fixed",
+      "value": "0x00"
+     },
+     {
+      "name": "pattern",
+      "type": "bcd4",
+      "bytes": 2,
+      "min": 0,
+      "max": 9999,
+      "note": "4 BCD digits, e.g. 1201 = 0x12 0x01"
+     }
+    ],
+    "note": "same layout as the write"
+   },
+   "confidence": {
+    "read": "verified",
+    "write": "manual"
+   }
+  },
+  {
+   "id": "dme_wipe_direction",
+   "name": "DME wipe direction",
+   "description": "Send together with dme_wipe_normal_reverse.",
+   "sections": [
+    "0x00"
+   ],
+   "read": {
+    "cmd": "0x1C",
+    "args": [
+     {
+      "name": "sub_address",
+      "type": "fixed",
+      "value": "0x01"
+     }
+    ]
+   },
+   "write": {
+    "cmd": "0x9C",
+    "args": [
+     {
+      "name": "sub_address",
+      "type": "fixed",
+      "value": "0x01"
+     },
+     {
+      "name": "direction",
+      "type": "enum",
+      "enum": "dme_direction"
+     }
+    ]
+   },
+   "answer": {
+    "cmd": "0x9C",
+    "data": [
+     {
+      "name": "sub_address",
+      "type": "fixed",
+      "value": "0x01"
+     },
+     {
+      "name": "direction",
+      "type": "enum",
+      "enum": "dme_direction"
+     }
+    ],
+    "note": "same layout as the write"
+   },
+   "confidence": {
+    "read": "verified",
+    "write": "manual"
+   }
+  },
+  {
+   "id": "dme_wipe_normal_reverse",
+   "name": "DME wipe normal/reverse",
+   "description": "Send together with dme_wipe_direction.",
+   "sections": [
+    "0x00"
+   ],
+   "read": {
+    "cmd": "0x1C",
+    "args": [
+     {
+      "name": "sub_address",
+      "type": "fixed",
+      "value": "0x02"
+     }
+    ]
+   },
+   "write": {
+    "cmd": "0x9C",
+    "args": [
+     {
+      "name": "sub_address",
+      "type": "fixed",
+      "value": "0x02"
+     },
+     {
+      "name": "state",
+      "type": "enum",
+      "enum": "off_on"
+     }
+    ]
+   },
+   "answer": {
+    "cmd": "0x9C",
+    "data": [
+     {
+      "name": "sub_address",
+      "type": "fixed",
+      "value": "0x02"
+     },
+     {
+      "name": "state",
+      "type": "enum",
+      "enum": "off_on"
+     }
+    ],
+    "note": "same layout as the write"
+   },
+   "confidence": {
+    "read": "verified",
+    "write": "manual"
+   }
+  },
+  {
+   "id": "key_dme_wipe_pattern",
+   "name": "Key DME wipe pattern",
+   "description": "DME wipe pattern for the key.",
+   "sections": [
+    "0x00"
+   ],
+   "read": {
+    "cmd": "0x1C",
+    "args": [
+     {
+      "name": "sub_address",
+      "type": "fixed",
+      "value": "0x10"
+     }
+    ]
+   },
+   "write": {
+    "cmd": "0x9C",
+    "args": [
+     {
+      "name": "sub_address",
+      "type": "fixed",
+      "value": "0x10"
+     },
+     {
+      "name": "pattern",
+      "type": "bcd4",
+      "bytes": 2,
+      "min": 0,
+      "max": 9999,
+      "note": "4 BCD digits, e.g. 1201 = 0x12 0x01"
+     }
+    ]
+   },
+   "answer": {
+    "cmd": "0x9C",
+    "data": [
+     {
+      "name": "sub_address",
+      "type": "fixed",
+      "value": "0x10"
+     },
+     {
+      "name": "pattern",
+      "type": "bcd4",
+      "bytes": 2,
+      "min": 0,
+      "max": 9999,
+      "note": "4 BCD digits, e.g. 1201 = 0x12 0x01"
+     }
+    ],
+    "note": "same layout as the write"
+   },
+   "confidence": {
+    "read": "verified",
+    "write": "manual"
+   }
+  },
+  {
+   "id": "key_dme_wipe_direction",
+   "name": "Key DME wipe direction",
+   "description": "Send together with key_dme_wipe_normal_reverse.",
+   "sections": [
+    "0x00"
+   ],
+   "read": {
+    "cmd": "0x1C",
+    "args": [
+     {
+      "name": "sub_address",
+      "type": "fixed",
+      "value": "0x11"
+     }
+    ]
+   },
+   "write": {
+    "cmd": "0x9C",
+    "args": [
+     {
+      "name": "sub_address",
+      "type": "fixed",
+      "value": "0x11"
+     },
+     {
+      "name": "direction",
+      "type": "enum",
+      "enum": "dme_direction"
+     }
+    ]
+   },
+   "answer": {
+    "cmd": "0x9C",
+    "data": [
+     {
+      "name": "sub_address",
+      "type": "fixed",
+      "value": "0x11"
+     },
+     {
+      "name": "direction",
+      "type": "enum",
+      "enum": "dme_direction"
+     }
+    ],
+    "note": "same layout as the write"
+   },
+   "confidence": {
+    "read": "verified",
+    "write": "manual"
+   }
+  },
+  {
+   "id": "key_dme_wipe_normal_reverse",
+   "name": "Key DME wipe normal/reverse",
+   "description": "Send together with key_dme_wipe_direction.",
+   "sections": [
+    "0x00"
+   ],
+   "read": {
+    "cmd": "0x1C",
+    "args": [
+     {
+      "name": "sub_address",
+      "type": "fixed",
+      "value": "0x12"
+     }
+    ]
+   },
+   "write": {
+    "cmd": "0x9C",
+    "args": [
+     {
+      "name": "sub_address",
+      "type": "fixed",
+      "value": "0x12"
+     },
+     {
+      "name": "state",
+      "type": "enum",
+      "enum": "off_on"
+     }
+    ]
+   },
+   "answer": {
+    "cmd": "0x9C",
+    "data": [
+     {
+      "name": "sub_address",
+      "type": "fixed",
+      "value": "0x12"
+     },
+     {
+      "name": "state",
+      "type": "enum",
+      "enum": "off_on"
+     }
+    ],
+    "note": "same layout as the write"
+   },
+   "confidence": {
+    "read": "verified",
+    "write": "manual"
+   }
+  },
+  {
+   "id": "key_wipe_pattern",
+   "name": "Key wipe pattern",
+   "description": "Wipe pattern for the key.",
+   "sections": [
+    "0x00"
+   ],
+   "read": {
+    "cmd": "0x33",
+    "args": [
+     {
+      "name": "sub_address",
+      "type": "fixed",
+      "value": "0x00"
+     }
+    ]
+   },
+   "write": {
+    "cmd": "0xB3",
+    "args": [
+     {
+      "name": "sub_address",
+      "type": "fixed",
+      "value": "0x00"
+     },
+     {
+      "name": "pattern",
+      "type": "bcd4",
+      "bytes": 2,
+      "min": 0,
+      "max": 9999,
+      "note": "4 BCD digits, e.g. 1201 = 0x12 0x01"
+     }
+    ]
+   },
+   "answer": {
+    "cmd": "0xB3",
+    "data": [
+     {
+      "name": "sub_address",
+      "type": "fixed",
+      "value": "0x00"
+     },
+     {
+      "name": "pattern",
+      "type": "bcd4",
+      "bytes": 2,
+      "min": 0,
+      "max": 9999,
+      "note": "4 BCD digits, e.g. 1201 = 0x12 0x01"
+     }
+    ],
+    "note": "same layout as the write"
+   },
+   "confidence": {
+    "read": "verified",
+    "write": "manual"
+   }
+  },
+  {
+   "id": "key_wipe_direction",
+   "name": "Key wipe direction",
+   "description": "Wipe direction for the key.",
+   "sections": [
+    "0x00"
+   ],
+   "read": {
+    "cmd": "0x33",
+    "args": [
+     {
+      "name": "sub_address",
+      "type": "fixed",
+      "value": "0x04"
+     }
+    ]
+   },
+   "write": {
+    "cmd": "0xB3",
+    "args": [
+     {
+      "name": "sub_address",
+      "type": "fixed",
+      "value": "0x04"
+     },
+     {
+      "name": "direction",
+      "type": "enum",
+      "enum": "wipe_direction_flags"
+     }
+    ]
+   },
+   "answer": {
+    "cmd": "0xB3",
+    "data": [
+     {
+      "name": "sub_address",
+      "type": "fixed",
+      "value": "0x04"
+     },
+     {
+      "name": "direction",
+      "type": "enum",
+      "enum": "wipe_direction_flags"
+     }
+    ],
+    "note": "same layout as the write"
+   },
+   "confidence": {
+    "read": "verified",
+    "write": "manual"
+   }
+  },
+  {
+   "id": "snapshot_store",
+   "name": "Snapshot store",
+   "description": "Stores the current state in a snapshot register.",
+   "sections": [
+    "0x21"
+   ],
+   "read": null,
+   "write": {
+    "cmd": "0x80",
+    "args": [
+     {
+      "name": "register",
+      "type": "u8",
+      "min": 1,
+      "max": 20
+     },
+     {
+      "name": "fixed",
+      "type": "fixed",
+      "value": "0x00"
+     },
+     {
+      "name": "fixed",
+      "type": "fixed",
+      "value": "0x00"
+     }
+    ]
+   },
+   "answer": {
+    "cmd": "0x80",
+    "data": [
+     {
+      "name": "register",
+      "type": "u8",
+      "min": 1,
+      "max": 20
+     },
+     {
+      "name": "fixed",
+      "type": "fixed",
+      "value": "0x00"
+     },
+     {
+      "name": "fixed",
+      "type": "fixed",
+      "value": "0x00"
+     }
+    ]
+   },
+   "confidence": {
+    "read": null,
+    "write": "manual (frame matches the manual's example)"
+   },
+   "danger": "Overwrites a snapshot register. Never send by accident; never send CMD 0x80-0xFF to EFF 0x21 while exploring."
+  },
+  {
+   "id": "snapshot_recall",
+   "name": "Snapshot recall",
+   "description": "Recalls a snapshot register.",
+   "sections": [
+    "0x21"
+   ],
+   "read": null,
+   "write": {
+    "cmd": "0x90",
+    "args": [
+     {
+      "name": "register",
+      "type": "u8",
+      "min": 1,
+      "max": 20
+     },
+     {
+      "name": "fixed",
+      "type": "fixed",
+      "value": "0x00"
+     },
+     {
+      "name": "fixed",
+      "type": "fixed",
+      "value": "0x00"
+     }
+    ]
+   },
+   "answer": {
+    "cmd": "0x90",
+    "data": [
+     {
+      "name": "register",
+      "type": "u8",
+      "min": 1,
+      "max": 20
+     },
+     {
+      "name": "fixed",
+      "type": "fixed",
+      "value": "0x00"
+     },
+     {
+      "name": "fixed",
+      "type": "fixed",
+      "value": "0x00"
+     }
+    ]
+   },
+   "confidence": {
+    "read": null,
+    "write": "manual (frame matches the manual's example)"
+   }
+  }
+ ],
+ "audio_commands": [
+  {
+   "id": "channel_faders",
+   "name": "Channel faders (all)",
+   "cmd": "0x10",
+   "read_cmd": "0x90",
+   "description": "All fader levels in one command: CH1-CH6, reserved, PGM.",
+   "data": [
+    {
+     "name": "CH1",
+     "type": "table",
+     "table": "channel_fader_db"
+    },
+    {
+     "name": "CH2",
+     "type": "table",
+     "table": "channel_fader_db"
+    },
+    {
+     "name": "CH3",
+     "type": "table",
+     "table": "channel_fader_db"
+    },
+    {
+     "name": "CH4",
+     "type": "table",
+     "table": "channel_fader_db"
+    },
+    {
+     "name": "CH5",
+     "type": "table",
+     "table": "channel_fader_db"
+    },
+    {
+     "name": "CH6",
+     "type": "table",
+     "table": "channel_fader_db"
+    },
+    {
+     "name": "reserved",
+     "type": "u8",
+     "note": "undocumented; reads 0xEE on the test unit. Write back what you read."
+    },
+    {
+     "name": "PGM",
+     "type": "table",
+     "table": "channel_fader_db"
+    }
+   ],
+   "read_data": [
+    "0x00",
+    "0x00",
+    "0x00",
+    "0x00",
+    "0x00",
+    "0x00",
+    "0x00",
+    "0x00"
+   ],
+   "confidence": {
+    "read": "verified",
+    "write": "manual"
+   },
+   "notes": [
+    "The unit has no motorised faders: a serial write changes the level but the physical fader does not move."
+   ]
+  },
+  {
+   "id": "master_fader",
+   "name": "Master fader",
+   "description": "MIX/AUX output level (SETUP/AUDIO menu).",
+   "cmd": "0x12",
+   "read_cmd": "0x92",
+   "data": [
+    {
+     "name": "output",
+     "type": "enum",
+     "enum": "master_channel"
+    },
+    {
+     "name": "level",
+     "type": "table",
+     "table": "master_fader_db"
+    }
+   ],
+   "read_data": [
+    "output",
+    "0x00"
+   ],
+   "confidence": {
+    "read": "verified",
+    "write": "manual"
+   }
+  },
+  {
+   "id": "mute",
+   "name": "Mute",
+   "description": "CH ON button. 1 = MUTED (button dark), 0 = live.",
+   "cmd": "0x13",
+   "read_cmd": "0x93",
+   "data": [
+    {
+     "name": "channel",
+     "type": "u8",
+     "min": 0,
+     "max": 5,
+     "note": "0 = CH1 ... 5 = CH6"
+    },
+    {
+     "name": "muted",
+     "type": "enum",
+     "enum": "mute"
+    }
+   ],
+   "read_data": [
+    "channel",
+    "0x00"
+   ],
+   "confidence": {
+    "read": "verified",
+    "write": "manual"
+   },
+   "notes": [
+    "The manual's 'OFF 0 / ON 1' is misleading: 1 means muted (verified on the panel)."
+   ]
+  },
+  {
+   "id": "trim",
+   "name": "Trim",
+   "description": "Input trim, -15 to +15 dB.",
+   "cmd": "0x14",
+   "read_cmd": "0x94",
+   "data": [
+    {
+     "name": "channel",
+     "type": "u8",
+     "min": 0,
+     "max": 5,
+     "note": "0 = CH1 ... 5 = CH6"
+    },
+    {
+     "name": "level",
+     "type": "table",
+     "table": "trim_and_eq_gain_db"
+    }
+   ],
+   "read_data": [
+    "channel",
+    "0x00"
+   ],
+   "confidence": {
+    "read": "verified",
+    "write": "manual"
+   }
+  },
+  {
+   "id": "low_cut_filter",
+   "name": "Low-cut filter",
+   "description": "Low-cut filter on/off.",
+   "cmd": "0x17",
+   "read_cmd": "0x97",
+   "data": [
+    {
+     "name": "channel",
+     "type": "u8",
+     "min": 0,
+     "max": 5,
+     "note": "0 = CH1 ... 5 = CH6"
+    },
+    {
+     "name": "state",
+     "type": "enum",
+     "enum": "off_on"
+    }
+   ],
+   "read_data": [
+    "channel",
+    "0x00"
+   ],
+   "confidence": {
+    "read": "verified",
+    "write": "manual"
+   }
+  },
+  {
+   "id": "high_cut_filter",
+   "name": "High-cut filter",
+   "description": "High-cut filter on/off.",
+   "cmd": "0x18",
+   "read_cmd": "0x98",
+   "data": [
+    {
+     "name": "channel",
+     "type": "u8",
+     "min": 0,
+     "max": 5,
+     "note": "0 = CH1 ... 5 = CH6"
+    },
+    {
+     "name": "state",
+     "type": "enum",
+     "enum": "off_on"
+    }
+   ],
+   "read_data": [
+    "channel",
+    "0x00"
+   ],
+   "confidence": {
+    "read": "verified",
+    "write": "manual"
+   }
+  },
+  {
+   "id": "eq_low_in",
+   "name": "EQ low on/off",
+   "description": "EQ low band on/off.",
+   "cmd": "0x19",
+   "read_cmd": "0x99",
+   "data": [
+    {
+     "name": "channel",
+     "type": "u8",
+     "min": 0,
+     "max": 5,
+     "note": "0 = CH1 ... 5 = CH6"
+    },
+    {
+     "name": "state",
+     "type": "enum",
+     "enum": "off_on"
+    }
+   ],
+   "read_data": [
+    "channel",
+    "0x00"
+   ],
+   "confidence": {
+    "read": "verified",
+    "write": "manual"
+   }
+  },
+  {
+   "id": "eq_low_frequency",
+   "name": "EQ low frequency",
+   "description": "31 Hz - 420 Hz.",
+   "cmd": "0x1B",
+   "read_cmd": "0x9B",
+   "data": [
+    {
+     "name": "channel",
+     "type": "u8",
+     "min": 0,
+     "max": 5,
+     "note": "0 = CH1 ... 5 = CH6"
+    },
+    {
+     "name": "frequency",
+     "type": "table",
+     "table": "eq_low_hz"
+    }
+   ],
+   "read_data": [
+    "channel",
+    "0x00"
+   ],
+   "confidence": {
+    "read": "verified",
+    "write": "manual"
+   }
+  },
+  {
+   "id": "eq_low_gain",
+   "name": "EQ low gain",
+   "description": "-15 to +15 dB.",
+   "cmd": "0x1C",
+   "read_cmd": "0x9C",
+   "data": [
+    {
+     "name": "channel",
+     "type": "u8",
+     "min": 0,
+     "max": 5,
+     "note": "0 = CH1 ... 5 = CH6"
+    },
+    {
+     "name": "gain",
+     "type": "table",
+     "table": "trim_and_eq_gain_db"
+    }
+   ],
+   "read_data": [
+    "channel",
+    "0x00"
+   ],
+   "confidence": {
+    "read": "verified",
+    "write": "manual"
+   }
+  },
+  {
+   "id": "eq_mid_in",
+   "name": "EQ mid on/off",
+   "description": "EQ mid band on/off.",
+   "cmd": "0x1D",
+   "read_cmd": "0x9D",
+   "data": [
+    {
+     "name": "channel",
+     "type": "u8",
+     "min": 0,
+     "max": 5,
+     "note": "0 = CH1 ... 5 = CH6"
+    },
+    {
+     "name": "state",
+     "type": "enum",
+     "enum": "off_on"
+    }
+   ],
+   "read_data": [
+    "channel",
+    "0x00"
+   ],
+   "confidence": {
+    "read": "verified",
+    "write": "manual"
+   }
+  },
+  {
+   "id": "eq_mid_frequency",
+   "name": "EQ mid frequency",
+   "description": "260 Hz - 6.4 kHz.",
+   "cmd": "0x1E",
+   "read_cmd": "0x9E",
+   "data": [
+    {
+     "name": "channel",
+     "type": "u8",
+     "min": 0,
+     "max": 5,
+     "note": "0 = CH1 ... 5 = CH6"
+    },
+    {
+     "name": "frequency",
+     "type": "table",
+     "table": "eq_mid_hz"
+    }
+   ],
+   "read_data": [
+    "channel",
+    "0x00"
+   ],
+   "confidence": {
+    "read": "verified",
+    "write": "manual"
+   }
+  },
+  {
+   "id": "eq_mid_gain",
+   "name": "EQ mid gain",
+   "description": "-15 to +15 dB.",
+   "cmd": "0x1F",
+   "read_cmd": "0x9F",
+   "data": [
+    {
+     "name": "channel",
+     "type": "u8",
+     "min": 0,
+     "max": 5,
+     "note": "0 = CH1 ... 5 = CH6"
+    },
+    {
+     "name": "gain",
+     "type": "table",
+     "table": "trim_and_eq_gain_db"
+    }
+   ],
+   "read_data": [
+    "channel",
+    "0x00"
+   ],
+   "confidence": {
+    "read": "verified",
+    "write": "manual"
+   }
+  },
+  {
+   "id": "eq_high_in",
+   "name": "EQ high on/off",
+   "description": "EQ high band on/off.",
+   "cmd": "0x20",
+   "read_cmd": "0xA0",
+   "data": [
+    {
+     "name": "channel",
+     "type": "u8",
+     "min": 0,
+     "max": 5,
+     "note": "0 = CH1 ... 5 = CH6"
+    },
+    {
+     "name": "state",
+     "type": "enum",
+     "enum": "off_on"
+    }
+   ],
+   "read_data": [
+    "channel",
+    "0x00"
+   ],
+   "confidence": {
+    "read": "verified",
+    "write": "manual"
+   }
+  },
+  {
+   "id": "eq_high_frequency",
+   "name": "EQ high frequency",
+   "description": "1.3 kHz - 17.4 kHz.",
+   "cmd": "0x22",
+   "read_cmd": "0xA2",
+   "data": [
+    {
+     "name": "channel",
+     "type": "u8",
+     "min": 0,
+     "max": 5,
+     "note": "0 = CH1 ... 5 = CH6"
+    },
+    {
+     "name": "frequency",
+     "type": "table",
+     "table": "eq_high_hz"
+    }
+   ],
+   "read_data": [
+    "channel",
+    "0x00"
+   ],
+   "confidence": {
+    "read": "verified",
+    "write": "manual"
+   }
+  },
+  {
+   "id": "eq_high_gain",
+   "name": "EQ high gain",
+   "description": "-15 to +15 dB.",
+   "cmd": "0x23",
+   "read_cmd": "0xA3",
+   "data": [
+    {
+     "name": "channel",
+     "type": "u8",
+     "min": 0,
+     "max": 5,
+     "note": "0 = CH1 ... 5 = CH6"
+    },
+    {
+     "name": "gain",
+     "type": "table",
+     "table": "trim_and_eq_gain_db"
+    }
+   ],
+   "read_data": [
+    "channel",
+    "0x00"
+   ],
+   "confidence": {
+    "read": "verified",
+    "write": "manual"
+   }
+  },
+  {
+   "id": "pan",
+   "name": "Pan",
+   "description": "15L - centre - 15R.",
+   "cmd": "0x33",
+   "read_cmd": "0xB3",
+   "data": [
+    {
+     "name": "channel",
+     "type": "u8",
+     "min": 0,
+     "max": 5,
+     "note": "0 = CH1 ... 5 = CH6"
+    },
+    {
+     "name": "position",
+     "type": "table",
+     "table": "pan"
+    }
+   ],
+   "read_data": [
+    "channel",
+    "0x00"
+   ],
+   "confidence": {
+    "read": "verified",
+    "write": "manual"
+   }
+  },
+  {
+   "id": "monitor_level",
+   "name": "Monitor level",
+   "description": "Monitor level knob (0-255, fader scale).",
+   "cmd": "0x40",
+   "read_cmd": "0xC0",
+   "data": [
+    {
+     "name": "fixed",
+     "type": "fixed",
+     "value": "0x00"
+    },
+    {
+     "name": "level",
+     "type": "table",
+     "table": "channel_fader_db"
+    }
+   ],
+   "read_data": [
+    "0x00",
+    "0x00"
+   ],
+   "confidence": {
+    "read": "verified",
+    "write": "manual"
+   }
+  },
+  {
+   "id": "monitor_dim",
+   "name": "Monitor dim",
+   "description": "DIM button.",
+   "cmd": "0x41",
+   "read_cmd": "0xC1",
+   "data": [
+    {
+     "name": "fixed",
+     "type": "fixed",
+     "value": "0x00"
+    },
+    {
+     "name": "state",
+     "type": "enum",
+     "enum": "off_on"
+    }
+   ],
+   "read_data": [
+    "0x00",
+    "0x00"
+   ],
+   "confidence": {
+    "read": "verified",
+    "write": "manual"
+   }
+  },
+  {
+   "id": "monitor_select",
+   "name": "Monitor select",
+   "description": "MONITOR SEL button.",
+   "cmd": "0x43",
+   "read_cmd": "0xC3",
+   "data": [
+    {
+     "name": "fixed",
+     "type": "fixed",
+     "value": "0x00"
+    },
+    {
+     "name": "source",
+     "type": "enum",
+     "enum": "monitor_select"
+    }
+   ],
+   "read_data": [
+    "0x00",
+    "0x00"
+   ],
+   "confidence": {
+    "read": "verified",
+    "write": "manual"
+   }
+  }
+ ],
+ "unsolicited": [
+  {
+   "family": "video",
+   "msg": [
+    "0x03",
+    "0x04",
+    "0x00",
+    "0x80",
+    "0x40",
+    "button"
+   ],
+   "meaning": "M/E A-bus (program) changed on the panel",
+   "confidence": "verified"
+  },
+  {
+   "family": "video",
+   "msg": [
+    "0x03",
+    "0x05",
+    "0x20",
+    "0xB7",
+    "0x00",
+    "0x00",
+    "0x01"
+   ],
+   "meaning": "transition started",
+   "confidence": "verified"
+  },
+  {
+   "family": "video",
+   "msg": [
+    "0x03",
+    "0x05",
+    "0x20",
+    "0xB7",
+    "0x00",
+    "0x00",
+    "0x00"
+   ],
+   "meaning": "transition finished",
+   "confidence": "verified"
+  },
+  {
+   "family": "video",
+   "msg": [
+    "0x03",
+    "0x04",
+    "0x02|0x03",
+    "0x80",
+    "flags",
+    "button"
+   ],
+   "meaning": "Aux A-bus changed on the panel",
+   "confidence": "guess (not yet tested)"
+  }
+ ],
+ "undocumented": [
+  {
+   "family": "video",
+   "sections": [
+    "0x00",
+    "0x02",
+    "0x03"
+   ],
+   "read_cmds": [
+    "0x02",
+    "0x03",
+    "0x04",
+    "0x05",
+    "0x06",
+    "0x09",
+    "0x0A",
+    "0x0B",
+    "0x0C",
+    "0x0D",
+    "0x0E",
+    "0x0F"
+   ],
+   "answer": "crosspoint layout [flags, button]; all read button 1; flags 0x80 on 0x0A/0x0C/0x0E (and 0x08 on Aux)",
+   "interpretation": "guess: a generic 16-bus crosspoint map; unused buses",
+   "confidence": "found"
+  },
+  {
+   "family": "video",
+   "sections": [
+    "0x00",
+    "0x02",
+    "0x03"
+   ],
+   "read_cmds": [
+    "0x2B",
+    "0x30",
+    "0x32",
+    "0x37",
+    "0x38",
+    "0x3A",
+    "0x3B",
+    "0x40",
+    "0x42",
+    "0x43",
+    "0x48",
+    "0x4A",
+    "0x4B"
+   ],
+   "answer": "[sub_address 0x00, value_hi, value_lo]; all 0x0001 except 0x2B = 0x8000",
+   "interpretation": "parameter groups with sub-addresses (not yet scanned)",
+   "confidence": "found"
+  },
+  {
+   "family": "video",
+   "sections": [
+    "0x00"
+   ],
+   "read_cmds": [
+    "0x3F"
+   ],
+   "answer": "[0x00, 0x00, 0x01]",
+   "confidence": "found"
+  },
+  {
+   "family": "video",
+   "sections": [
+    "0x00",
+    "0x02",
+    "0x03"
+   ],
+   "read_cmds": [
+    "0x13",
+    "0x15"
+   ],
+   "answer": "[0x00]",
+   "confidence": "found"
+  },
+  {
+   "family": "video",
+   "sections": [
+    "0x20"
+   ],
+   "observed": {
+    "0x00": [
+     "0xFF"
+    ],
+    "0x09": [
+     "0xFF"
+    ],
+    "0x3A": [
+     "0x00",
+     "0x00"
+    ],
+    "0x54": [
+     "0x00"
+    ]
+   },
+   "confidence": "found"
+  },
+  {
+   "family": "video",
+   "sections": [
+    "0x21"
+   ],
+   "observed": {
+    "0x08": [
+     "0x00",
+     "0x00",
+     "0x00",
+     "0x00"
+    ],
+    "0x09": [
+     "0x00",
+     "0x01"
+    ],
+    "0x12": [
+     "0x00",
+     "0x00",
+     "0x00"
+    ]
+   },
+   "interpretation": "guess: 0x09 may be the last recalled/stored register",
+   "confidence": "found"
+  },
+  {
+   "family": "audio",
+   "read_cmds": [
+    "0x95",
+    "0x96"
+   ],
+   "cmds": [
+    "0x15",
+    "0x16"
+   ],
+   "answer": "[channel, 0x00]",
+   "interpretation": "guess: input select / phase / phantom power",
+   "confidence": "found"
+  }
+ ],
+ "errata": [
+  {
+   "item": "BC byte order",
+   "manual": "2 byte Little Endian",
+   "correct": "big-endian",
+   "impact": "critical: little-endian frames are silently ignored"
+  },
+  {
+   "item": "MUTE meaning",
+   "manual": "OFF 0 / ON 1",
+   "correct": "1 = muted (CH ON dark), 0 = live"
+  },
+  {
+   "item": "XPT byte3",
+   "manual": "always 0x00",
+   "correct": "M/E A-bus answers 0x40; some buses 0x80"
+  },
+  {
+   "item": "audio status example",
+   "manual": "... 17 00 01 5F 03 = OFF",
+   "correct": "checksum should be 0x5E; 01 would mean ON"
+  },
+  {
+   "item": "EQ LOW IN example",
+   "manual": "CMD 0x17",
+   "correct": "CMD 0x19"
+  },
+  {
+   "item": "snapshot register table",
+   "manual": "0x01: 2",
+   "correct": "0x02: 2"
+  },
+  {
+   "item": "AUTO TRANSITION note",
+   "manual": "byte5, byte6",
+   "correct": "byte4, byte5"
+  },
+  {
+   "item": "fader table",
+   "manual": "codes 60 and 61 both -34.2 dB",
+   "correct": "typo (one is probably about -34.6 dB)"
+  }
+ ],
+ "enums": {
+  "transition_function": {
+   "0x00": "Effect (background)",
+   "0x01": "Key",
+   "0x06": "Fade to black"
+  },
+  "transition_type": {
+   "0x02": "MIX",
+   "0x04": "WIPE",
+   "0x08": "NAM",
+   "0x14": "CUT",
+   "0x20": "DME WIPE"
+  },
+  "next_transition": {
+   "0x01": "BKGD",
+   "0x02": "KEY",
+   "0x03": "BKGD+KEY"
+  },
+  "master_channel": {
+   "0x00": "MIX-1/2",
+   "0x01": "MIX-3/4",
+   "0x02": "AUX-1",
+   "0x03": "AUX-2"
+  },
+  "monitor_select": {
+   "0x01": "PGM-L/R",
+   "0x02": "MIX-L/R",
+   "0x04": "AUX-1",
+   "0x05": "AUX-2"
+  },
+  "mute": {
+   "0x00": "live (CH ON lit)",
+   "0x01": "muted (CH ON dark)"
+  },
+  "off_on": {
+   "0x00": "off",
+   "0x01": "on"
+  },
+  "dme_direction": {
+   "0x00": "normal",
+   "0x01": "reverse"
+  },
+  "wipe_direction_flags": {
+   "0x01": "normal/reverse (alternate)",
+   "0x02": "normal",
+   "0x04": "reverse",
+   "_type": "bit flags: bit0 normal/reverse, bit1 normal, bit2 reverse"
+  }
+ },
+ "value_tables": {
+  "_note": "index = code",
+  "channel_fader_db": [
+   "-inf",
+   "-77.1",
+   "-76.2",
+   "-75.4",
+   "-74.5",
+   "-73.7",
+   "-72.8",
+   "-72.0",
+   "-71.1",
+   "-70.2",
+   "-69.4",
+   "-68.5",
+   "-67.7",
+   "-66.8",
+   "-66.0",
+   "-65.1",
+   "-64.2",
+   "-63.4",
+   "-62.5",
+   "-61.7",
+   "-60.8",
+   "-60.0",
+   "-59.2",
+   "-58.4",
+   "-57.6",
+   "-56.8",
+   "-56.0",
+   "-55.2",
+   "-54.4",
+   "-53.6",
+   "-52.8",
+   "-52.0",
+   "-51.2",
+   "-50.4",
+   "-49.6",
+   "-48.8",
+   "-48.0",
+   "-47.2",
+   "-46.4",
+   "-45.6",
+   "-44.8",
+   "-44.0",
+   "-43.2",
+   "-42.4",
+   "-41.6",
+   "-40.8",
+   "-40.0",
+   "-39.6",
+   "-39.2",
+   "-38.8",
+   "-38.4",
+   "-38.0",
+   "-37.6",
+   "-37.3",
+   "-36.9",
+   "-36.5",
+   "-36.1",
+   "-35.7",
+   "-35.3",
+   "-35.0",
+   "-34.2",
+   "-34.2",
+   "-33.8",
+   "-33.4",
+   "-33.0",
+   "-32.6",
+   "-32.3",
+   "-31.9",
+   "-31.5",
+   "-31.1",
+   "-30.7",
+   "-30.3",
+   "-30.0",
+   "-29.6",
+   "-29.3",
+   "-29.0",
+   "-28.6",
+   "-28.3",
+   "-28.0",
+   "-27.6",
+   "-27.3",
+   "-27.0",
+   "-26.6",
+   "-26.3",
+   "-26.0",
+   "-25.6",
+   "-25.3",
+   "-25.0",
+   "-24.6",
+   "-24.3",
+   "-24.0",
+   "-23.6",
+   "-23.3",
+   "-23.0",
+   "-22.6",
+   "-22.3",
+   "-22.0",
+   "-21.6",
+   "-21.3",
+   "-21.0",
+   "-20.6",
+   "-20.3",
+   "-20.0",
+   "-19.6",
+   "-19.3",
+   "-19.0",
+   "-18.7",
+   "-18.3",
+   "-18.0",
+   "-17.7",
+   "-17.4",
+   "-17.0",
+   "-16.7",
+   "-16.4",
+   "-16.1",
+   "-15.8",
+   "-15.4",
+   "-15.1",
+   "-14.8",
+   "-14.5",
+   "-14.1",
+   "-13.8",
+   "-13.5",
+   "-13.2",
+   "-12.9",
+   "-12.5",
+   "-12.2",
+   "-11.9",
+   "-11.6",
+   "-11.2",
+   "-10.9",
+   "-10.6",
+   "-10.3",
+   "-10.0",
+   "-9.8",
+   "-9.6",
+   "-9.5",
+   "-9.3",
+   "-9.1",
+   "-9.0",
+   "-8.8",
+   "-8.7",
+   "-8.5",
+   "-8.3",
+   "-8.2",
+   "-8.0",
+   "-7.9",
+   "-7.7",
+   "-7.5",
+   "-7.4",
+   "-7.2",
+   "-7.0",
+   "-6.9",
+   "-6.7",
+   "-6.6",
+   "-6.4",
+   "-6.2",
+   "-6.1",
+   "-5.9",
+   "-5.8",
+   "-5.6",
+   "-5.4",
+   "-5.3",
+   "-5.1",
+   "-5.0",
+   "-4.8",
+   "-4.6",
+   "-4.5",
+   "-4.3",
+   "-4.1",
+   "-4.0",
+   "-3.8",
+   "-3.6",
+   "-3.5",
+   "-3.3",
+   "-3.1",
+   "-3.0",
+   "-2.8",
+   "-2.6",
+   "-2.5",
+   "-2.3",
+   "-2.1",
+   "-2.0",
+   "-1.8",
+   "-1.6",
+   "-1.5",
+   "-1.3",
+   "-1.1",
+   "-1.0",
+   "-0.8",
+   "-0.6",
+   "-0.5",
+   "-0.3",
+   "-0.1",
+   "0",
+   "0.1",
+   "0.3",
+   "0.4",
+   "0.6",
+   "0.8",
+   "0.9",
+   "1.1",
+   "1.2",
+   "1.4",
+   "1.6",
+   "1.7",
+   "1.9",
+   "2.0",
+   "2.2",
+   "2.4",
+   "2.5",
+   "2.7",
+   "2.9",
+   "3.0",
+   "3.2",
+   "3.3",
+   "3.5",
+   "3.7",
+   "3.8",
+   "4.0",
+   "4.1",
+   "4.3",
+   "4.5",
+   "4.6",
+   "4.8",
+   "5.0",
+   "5.1",
+   "5.3",
+   "5.5",
+   "5.6",
+   "5.8",
+   "6.0",
+   "6.1",
+   "6.3",
+   "6.5",
+   "6.6",
+   "6.8",
+   "7.0",
+   "7.1",
+   "7.3",
+   "7.5",
+   "7.6",
+   "7.8",
+   "8.0",
+   "8.1",
+   "8.3",
+   "8.5",
+   "8.6",
+   "8.8",
+   "9.0",
+   "9.1",
+   "9.3",
+   "9.5",
+   "9.6",
+   "9.8",
+   "10.0"
+  ],
+  "master_fader_db": [
+   "-inf",
+   "-60",
+   "-52",
+   "-48",
+   "-44",
+   "-40",
+   "-36",
+   "-32",
+   "-28",
+   "-24",
+   "-20",
+   "-18",
+   "-16",
+   "-14",
+   "-12",
+   "-10",
+   "-8",
+   "-6",
+   "-4",
+   "-2",
+   "0",
+   "1",
+   "2",
+   "3",
+   "4",
+   "5",
+   "6",
+   "7",
+   "8",
+   "9",
+   "10"
+  ],
+  "trim_and_eq_gain_db": [
+   "-15",
+   "-14",
+   "-13",
+   "-12",
+   "-11",
+   "-10",
+   "-9",
+   "-8",
+   "-7",
+   "-6",
+   "-5",
+   "-4",
+   "-3",
+   "-2",
+   "-1",
+   "0",
+   "1",
+   "2",
+   "3",
+   "4",
+   "5",
+   "6",
+   "7",
+   "8",
+   "9",
+   "10",
+   "11",
+   "12",
+   "13",
+   "14",
+   "15"
+  ],
+  "eq_low_hz": [
+   "31.0",
+   "33.8",
+   "36.8",
+   "40.2",
+   "43.8",
+   "47.8",
+   "52.2",
+   "56.9",
+   "62.1",
+   "67.7",
+   "73.9",
+   "80.6",
+   "87.9",
+   "95.9",
+   "104.6",
+   "114.1",
+   "124.4",
+   "135.7",
+   "148.0",
+   "161.5",
+   "176.1",
+   "192.1",
+   "209.6",
+   "228.6",
+   "249.3",
+   "272.0",
+   "296.7",
+   "323.6",
+   "353.0",
+   "385.0",
+   "420.0"
+  ],
+  "eq_mid_hz": [
+   "260.0",
+   "289.2",
+   "321.8",
+   "358.1",
+   "398.5",
+   "443.4",
+   "493.4",
+   "549.0",
+   "610.8",
+   "679.7",
+   "756.3",
+   "841.5",
+   "936.3",
+   "1040",
+   "1150",
+   "1280",
+   "1430",
+   "1590",
+   "1770",
+   "1970",
+   "2200",
+   "2440",
+   "2720",
+   "3030",
+   "3370",
+   "3750",
+   "4170",
+   "4640",
+   "5160",
+   "5750",
+   "6400"
+  ],
+  "eq_high_hz": [
+   "1300",
+   "1410",
+   "1540",
+   "1680",
+   "1830",
+   "2000",
+   "2180",
+   "2380",
+   "2590",
+   "2830",
+   "3080",
+   "3360",
+   "3660",
+   "4000",
+   "4360",
+   "4750",
+   "5180",
+   "5650",
+   "6160",
+   "6720",
+   "7320",
+   "7990",
+   "8710",
+   "9490",
+   "10350",
+   "11290",
+   "12310",
+   "13420",
+   "14630",
+   "15950",
+   "17400"
+  ],
+  "pan": [
+   "15L",
+   "14L",
+   "13L",
+   "12L",
+   "11L",
+   "10L",
+   "9L",
+   "8L",
+   "7L",
+   "6L",
+   "5L",
+   "4L",
+   "3L",
+   "2L",
+   "1L",
+   "C",
+   "1R",
+   "2R",
+   "3R",
+   "4R",
+   "5R",
+   "6R",
+   "7R",
+   "8R",
+   "9R",
+   "10R",
+   "11R",
+   "12R",
+   "13R",
+   "14R",
+   "15R"
+  ]
+ },
+ "examples": [
+  {
+   "name": "read program (M/E A-bus)",
+   "tx": "01 02 00 09 01 50 20 00 00 03 02 00 00 81 03",
+   "rx": "01 02 00 0B 01 50 20 00 00 03 04 00 80 40 02 BB 03",
+   "result": "button 2",
+   "confidence": "verified"
+  },
+  {
+   "name": "read Aux2 A-bus",
+   "tx": "01 02 00 09 01 50 20 00 00 03 02 03 00 7E 03",
+   "rx": "01 02 00 0B 01 50 20 00 00 03 04 03 80 00 07 F3 03",
+   "result": "button 7",
+   "confidence": "verified"
+  },
+  {
+   "name": "read effect transition rate",
+   "tx": "01 02 00 0B 01 50 20 00 00 03 04 00 18 00 00 65 03",
+   "rx": "01 02 00 0D 01 50 20 00 00 03 06 00 98 00 00 00 30 B1 03",
+   "result": "30 frames",
+   "confidence": "verified"
+  },
+  {
+   "name": "read all channel faders",
+   "tx": "01 02 00 0E 02 50 30 00 00 90 00 00 00 00 00 00 00 00 E0 03",
+   "rx": "01 02 00 0E 02 50 30 00 00 10 00 00 00 00 00 BE EE BE F6 03",
+   "result": "CH6 and PGM -0.6 dB, others -inf",
+   "confidence": "verified"
+  },
+  {
+   "name": "read CH6 mute",
+   "tx": "01 02 00 08 02 50 30 00 00 93 05 00 DE 03",
+   "rx": "01 02 00 08 02 50 30 00 00 13 05 00 5E 03",
+   "result": "live",
+   "confidence": "verified"
+  },
+  {
+   "name": "write Aux1 A-bus = button 1",
+   "tx": "01 02 00 0B 01 50 20 00 00 03 04 02 80 00 01 FA 03",
+   "confidence": "verified"
+  },
+  {
+   "name": "auto transition, cut (rate 0)",
+   "tx": "01 02 00 0C 01 50 20 00 00 03 05 00 96 00 00 00 E5 03",
+   "confidence": "manual"
+  },
+  {
+   "name": "snapshot recall 1",
+   "tx": "01 02 00 0C 01 50 20 00 00 03 05 21 90 01 00 00 C9 03",
+   "confidence": "manual"
+  }
+ ]
+}
