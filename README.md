@@ -33,7 +33,7 @@ Preset  (next):   7
 
 Ready-to-use code in **Python, Node.js and Node-RED** is in [examples/](examples/).
 
-Just want a projector control panel? Import the **[Node-RED dashboard](examples/node-red/dashboard/)**: source buttons for Aux 1 and Aux 2 on any phone or tablet.
+Just want a projector control panel? Import the **[Node-RED dashboard](examples/node-red/dashboard/)**: source buttons for Aux 1 and Aux 2 on any phone or tablet. On a fresh Raspberry Pi, `bash tools/install-pi.sh --dashboard` sets it all up; see [Pi setup](docs/08-pi-setup.md).
 
 ## Contents
 
@@ -47,6 +47,7 @@ Just want a projector control panel? Import the **[Node-RED dashboard](examples/
 | [05 Undocumented](docs/05-undocumented.md) | Commands found by probing, and how to help decode them |
 | [06 Examples](docs/06-examples.md) | Real captured frames, annotated byte by byte |
 | [07 Hardware](docs/07-hardware.md) | Enabling Rem 1, the REMOTE pinout, null-modem cables, adapters (RS-232 vs TTL), cable length, loopback test |
+| [08 Raspberry Pi setup](docs/08-pi-setup.md) | Blank SD card to working controller in ~30 min, securing the editor, backing up your setup, rebuilding after a failure |
 
 ## Confidence labels
 
@@ -68,6 +69,7 @@ Tested on: MCS-8M, main application version 1.01 or later, RS-232 at 38400 8N1 t
 | [`tools/mcs8m_dump.py`](tools/mcs8m_dump.py) | Reads every documented setting (118 reads, about 31 s) and writes a JSON file. **Read-only.** |
 | [`tools/mcs8m_probe.py`](tools/mcs8m_probe.py) | Searches for undocumented read commands. **Read-only**, can be resumed, and stops if anything unexpected happens. |
 | [`tools/values.json`](tools/values.json) | Code-to-value tables (fader dB, EQ frequencies, pan…), made by `tools/gen_values.py` |
+| [`tools/install-pi.sh`](tools/install-pi.sh) | One-command Raspberry Pi setup: Node-RED, add-ons, serial permissions, this repo; `--dashboard` or `--restore` |
 | [`tools/loopback_test.py`](tools/loopback_test.py) | Checks your adapter and cable without the switcher (pins 2–3 joined) |
 | [`tools/simulator.py`](tools/simulator.py) | A fake MCS-8M on a virtual serial port, for development without hardware |
 | [`tools/check_docs.py`](tools/check_docs.py) | Checks the byte count and checksum of every frame quoted in these docs |
