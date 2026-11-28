@@ -32,7 +32,9 @@ def main(by_name=False):
                                     "overlay": 1, "seconds": 1.0, "for_inputs": []},
                     "on_program": {"4": [{"function": "CutDirect", "Input": pip}],
                                    "8": [{"function": "CutDirect", "Input": capture}]},
-                    "control": {"vmix_to_switcher": {"5": 6, "6": 3, "7": 8}, "transition": "cut"}}}
+                    # "2": 1 gives the Sony-4 action's echo somewhere to bounce to, so "both" mode really
+                    # checks that the connector recognises its own (named or numbered) cut.
+                    "control": {"vmix_to_switcher": {"2": 1, "5": 6, "6": 3, "7": 8}, "transition": "cut"}}}
     bridge, srv = B.start(cfg)
     c = Client(f"http://127.0.0.1:{srv.server_address[1]}")
     try:
