@@ -16,8 +16,12 @@ def calls(v, name):
     return [q for n, q in v.calls if n.lower() == name.lower()]
 
 
-def main():
+def main(by_name=False):
+    """by_name: the cut actions name their vMix input instead of giving its number. vMix reports
+    its program as a number, so echo suppression and the loop guard must still work."""
     B.log = lambda *a: None
+    print(f"\n=== cut actions give the vMix input by {'NAME' if by_name else 'number'} ===")
+    pip, capture = ("Camera PiP", "MCS-8M capture") if by_name else ("2", "1")
     vm = FakeVmix(port=0)                  # vMix inputs: 1 MCS-8M capture, 2 Camera PiP, 3 Lower Third, ... 7 Graphics
     sim = Sim(*([] if os.environ.get("REAL_SPEED") else ["--fast"]))
     cfg = {"serial_port": sim.port, "http": {"host": "127.0.0.1", "port": 0}, "poll_seconds": 3,
@@ -26,8 +30,8 @@ def main():
            "vmix": {"enabled": True, "host": "127.0.0.1", "port": vm.port, "mode": "switcher_leads",
                     "lower_third": {"enabled": True, "input": "Lower Third", "field": "Headline.Text",
                                     "overlay": 1, "seconds": 1.0, "for_inputs": []},
-                    "on_program": {"4": [{"function": "CutDirect", "Input": "2"}],
-                                   "8": [{"function": "CutDirect", "Input": "1"}]},
+                    "on_program": {"4": [{"function": "CutDirect", "Input": pip}],
+                                   "8": [{"function": "CutDirect", "Input": capture}]},
                     "control": {"vmix_to_switcher": {"5": 6, "6": 3, "7": 8}, "transition": "cut"}}}
     bridge, srv = B.start(cfg)
     c = Client(f"http://127.0.0.1:{srv.server_address[1]}")
@@ -119,9 +123,10 @@ def main():
         check("vMix back -> reconnected", wait_for(lambda: c.state()["apps"]["vmix"]["connected"], 12))
     finally:
         bridge.stop.set(); sim.close(); vm.close()
-    print(f"\n{'ALL PASSED' if not FAILS else str(len(FAILS)) + ' FAILED: ' + ', '.join(FAILS)}")
-    sys.exit(1 if FAILS else 0)
 
 
 if __name__ == "__main__":
-    main()
+    main(by_name=False)
+    main(by_name=True)
+    print(f"\n{'ALL PASSED' if not FAILS else str(len(FAILS)) + ' FAILED: ' + ', '.join(FAILS)}")
+    sys.exit(1 if FAILS else 0)

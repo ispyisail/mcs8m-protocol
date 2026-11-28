@@ -36,6 +36,7 @@ class VmixConnector:
         self.sendq = queue.Queue()
         self.expected = []                  # [vmix input, deadline] for changes we caused
         self.program = self.preview = None
+        self.input_numbers = {}             # vMix input title / short title / key (lower case) -> number
         self.hide_timer = None
         self.sock = None
         bridge.register_app("vmix", self.cfg.get("mode", "switcher_leads"))
@@ -77,14 +78,31 @@ class VmixConnector:
                 continue
             params = {k: str(v).replace("{input}", str(n)).replace("{name}", name) for k, v in a.items()}
             if fn.lower() in CUT_FUNCTIONS and "Input" in params:
+                # vMix reports its program as a number, so the loop guard and the echo check
+                # need the number even when the action names the input.
+                number = self.input_number(params["Input"])
                 try:
-                    self.b.guard_vmix(params["Input"])
+                    if number is None and self.loop_protection_on():
+                        raise ValueError(f"refused: vMix input '{params['Input']}' isn't known yet, so the "
+                                         f"video-loop guard can't check it")
+                    self.b.guard_vmix(number if number is not None else params["Input"])
                 except Exception as e:
                     self.log(f"vmix: {e}")
                     self.b.emit({"type": "refused", "app": "vmix", "error": str(e)})
                     continue
-                self.expect(params["Input"])
+                self.expect(number if number is not None else params["Input"])
             self.function(fn, **params)
+
+    def input_number(self, ref):
+        """vMix input number for an Input given by number, title, short title or key; None if unknown."""
+        ref = str(ref).strip()
+        if ref.isdigit():
+            return ref
+        return self.input_numbers.get(ref.lower())
+
+    def loop_protection_on(self):
+        lp = self.b.cfg.get("loop_protection") or {}
+        return lp.get("switcher_input_from_vmix") is not None and lp.get("vmix_input_from_switcher") is not None
 
     def show_lower_third(self, text):
         inp, ov = self.lt.get("input", "Lower Third"), int(self.lt.get("overlay", 1))
@@ -207,5 +225,14 @@ class VmixConnector:
         except ET.ParseError as e:
             self.log(f"vmix: bad XML ({e})")
             return
+        inputs = root.find("inputs")
+        if inputs is not None:
+            names = {}
+            for i in inputs.findall("input"):
+                number = (i.get("number") or "").strip()
+                for name in (i.get("title"), i.get("shortTitle"), i.get("key")):
+                    if number and name and name.strip().lower() not in names:
+                        names[name.strip().lower()] = number
+            self.input_numbers = names
         active, preview = root.findtext("active"), root.findtext("preview")
         self.on_vmix_program(active.strip() if active else None, preview.strip() if preview else None)
