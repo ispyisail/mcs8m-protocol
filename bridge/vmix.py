@@ -37,6 +37,7 @@ class VmixConnector:
         self.expected = []                  # [vmix input, deadline] for changes we caused
         self.program = self.preview = None
         self.input_numbers = {}             # vMix input title / short title / key (lower case) -> number
+        self.xml_ready = False              # this connection's first XML has been read
         self.hide_timer = None
         self.sock = None
         bridge.register_app("vmix", self.cfg.get("mode", "switcher_leads"))
@@ -179,18 +180,27 @@ class VmixConnector:
     def session(self):
         s = self.sock
         s.settimeout(0.1)
+        # Names must map to this vMix's current inputs: forget the old ones, and hold Sony changes
+        # until the first XML of this connection is read (named cut actions need it).
+        self.input_numbers, self.xml_ready = {}, False
         s.sendall(b"SUBSCRIBE TALLY\r\nXML\r\n")
         buf, xml_wait, last_xml = b"", None, time.monotonic()
         while not self.b.stop.is_set():
+            held = []
             while True:                                        # outgoing
                 try:
                     kind, item = self.sendq.get_nowait()
                 except queue.Empty:
                     break
                 if kind == "follow":
-                    self.follow(item)
+                    if self.xml_ready:
+                        self.follow(item)
+                    else:
+                        held.append((kind, item))
                 else:
                     s.sendall(item.encode("utf-8") + b"\r\n")
+            for h in held:
+                self.sendq.put(h)
             if time.monotonic() - last_xml > 10:               # safety-net refresh
                 s.sendall(b"XML\r\n"); last_xml = time.monotonic()
             try:
@@ -234,5 +244,6 @@ class VmixConnector:
                     if number and name and name.strip().lower() not in names:
                         names[name.strip().lower()] = number
             self.input_numbers = names
+        self.xml_ready = True
         active, preview = root.findtext("active"), root.findtext("preview")
         self.on_vmix_program(active.strip() if active else None, preview.strip() if preview else None)
